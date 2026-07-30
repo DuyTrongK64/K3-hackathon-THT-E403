@@ -16,7 +16,20 @@ function publicError(error: unknown) {
       "Server chưa được cấu hình OPENAI_API_KEY.",
     OPENAI_EMPTY_RESPONSE: "OpenAI không trả về nội dung.",
     OPENAI_INVALID_JSON: "OpenAI trả về dữ liệu không đúng cấu trúc.",
-    OPENAI_MATCHES_EMPTY: "Matching Engine chưa tạo được kết quả hợp lệ.",
+    OPENAI_INSUFFICIENT_QUOTA:
+      "API key đã được nhận nhưng project OpenAI chưa có credit, đã hết quota hoặc chạm giới hạn chi tiêu. Hãy kiểm tra Billing và Limits.",
+    OPENAI_AUTHENTICATION_FAILED:
+      "OpenAI từ chối API key. Hãy kiểm tra key còn hiệu lực và thuộc đúng project.",
+    OPENAI_MODEL_NOT_AVAILABLE:
+      "Project của API key chưa được cấp quyền sử dụng model đang cấu hình. Hãy đổi OPENAI_MODEL rồi khởi động lại.",
+    OPENAI_RATE_LIMITED:
+      "OpenAI đang giới hạn tần suất yêu cầu. Vui lòng chờ một lát rồi thử lại.",
+    OPENAI_CONNECTION_ERROR:
+      "Server không thể kết nối tới OpenAI. Hãy kiểm tra mạng hoặc proxy.",
+    OPENAI_BAD_REQUEST:
+      "OpenAI từ chối cấu trúc yêu cầu. Vui lòng kiểm tra model và cấu hình Structured Output.",
+    OPENAI_REQUEST_FAILED:
+      "Yêu cầu OpenAI thất bại. Vui lòng kiểm tra trạng thái dịch vụ và thử lại.",
     CV_INPUT_REQUIRED: "Hãy tải CV hoặc dán nội dung CV trước.",
     AGENT_MESSAGE_REQUIRED: "Vui lòng nhập câu hỏi trước khi gửi.",
   };
@@ -25,7 +38,7 @@ function publicError(error: unknown) {
     code,
     message:
       messages[code] ??
-      "Không thể hoàn thành yêu cầu với OpenAI. Hãy kiểm tra API key, quota và thử lại.",
+      "Không thể hoàn thành yêu cầu với OpenAI. Hãy kiểm tra API key, Billing, quota và thử lại.",
   };
 }
 
@@ -69,4 +82,3 @@ export async function POST(request: Request) {
     },
   });
 }
-

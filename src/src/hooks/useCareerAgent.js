@@ -57,6 +57,18 @@ export function useCareerAgent() {
             "CV chưa có kỹ năng đủ rõ để thực hiện đánh giá.",
           OPENAI_API_KEY_MISSING:
             "Server chưa có OPENAI_API_KEY. Hãy thêm key vào .env.local rồi khởi động lại.",
+          OPENAI_INSUFFICIENT_QUOTA:
+            "API key đã được nhận nhưng project OpenAI chưa có credit, đã hết quota hoặc chạm giới hạn chi tiêu.",
+          OPENAI_AUTHENTICATION_FAILED:
+            "OpenAI từ chối API key. Hãy kiểm tra key còn hiệu lực và thuộc đúng project.",
+          OPENAI_MODEL_NOT_AVAILABLE:
+            "Project chưa dùng được model đã cấu hình. Hãy đổi OPENAI_MODEL rồi khởi động lại.",
+          OPENAI_RATE_LIMITED:
+            "OpenAI đang giới hạn tần suất yêu cầu. Vui lòng chờ rồi thử lại.",
+          OPENAI_CONNECTION_ERROR:
+            "Server không thể kết nối tới OpenAI.",
+          OPENAI_BAD_REQUEST:
+            "OpenAI từ chối cấu trúc request. Hãy kiểm tra model và Structured Output.",
           CV_FILE_TOO_LARGE: "CV vượt quá giới hạn 8 MB.",
           CV_FILE_READ_FAILED: "Không thể đọc file CV đã chọn.",
           AGENT_API_ERROR:

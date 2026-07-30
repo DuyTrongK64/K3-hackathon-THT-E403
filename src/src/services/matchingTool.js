@@ -22,8 +22,6 @@ const MATCH_SCHEMA = {
           "internWishes",
           "employerRequirements",
           "preferredSkills",
-          "experience",
-          "fresherEnvironment",
           "reasons",
           "matchedSkills",
           "missingSkills",
@@ -34,8 +32,6 @@ const MATCH_SCHEMA = {
           internWishes: { type: "number" },
           employerRequirements: { type: "number" },
           preferredSkills: { type: "number" },
-          experience: { type: "number" },
-          fresherEnvironment: { type: "number" },
           reasons: {
             type: "array",
             minItems: 1,
@@ -58,8 +54,8 @@ const MATCH_SCHEMA = {
 
 /**
  * TOOL 3 — Matching Engine powered by OpenAI.
- * Trọng số cao nhất thuộc về mong muốn thực tập sinh (42%)
- * và kỹ năng/yêu cầu bắt buộc của nhà tuyển dụng (38%).
+ * Điểm chỉ dựa trên mong muốn ứng viên và mức khớp kỹ năng với yêu cầu JD.
+ * Lương, trợ cấp, kinh nghiệm và độ cạnh tranh không tham gia xếp hạng.
  */
 export async function calculateTopMatches(
   { jdData, cvData, limit = 3 } = {},
@@ -79,13 +75,12 @@ export async function calculateTopMatches(
     schema: MATCH_SCHEMA,
     instructions: `Bạn là Matching Engine cho chương trình thực tập 6 tuần.
 Chọn tối đa Top ${limit} JD phù hợp nhất. Chấm đúng thang 100 theo trọng số:
-- Mong muốn thực tập sinh: tối đa 42 điểm.
-- Yêu cầu bắt buộc nhà tuyển dụng: tối đa 38 điểm.
+- Mong muốn thực tập sinh: tối đa 40 điểm.
+- Kỹ năng khớp yêu cầu bắt buộc của nhà tuyển dụng: tối đa 50 điểm.
 - Kỹ năng ưu tiên: tối đa 10 điểm.
-- Kinh nghiệm: tối đa 7 điểm.
-- Mức thân thiện fresher: tối đa 3 điểm.
-score phải bằng tổng 5 điểm thành phần và nằm trong 0-100.
-Không cộng điểm cho kỹ năng không xuất hiện trong CV. Lý do phải cụ thể, bằng tiếng Việt.`,
+score phải bằng tổng 3 điểm thành phần và nằm trong 0-100.
+Không sử dụng mức lương, trợ cấp, số năm kinh nghiệm, tỷ lệ cạnh tranh hoặc mức thân thiện fresher để cộng/trừ điểm.
+Không cộng điểm cho kỹ năng không xuất hiện trong CV. Lý do phải nêu rõ mong muốn nào và kỹ năng nào khớp hoặc còn thiếu, bằng tiếng Việt.`,
     input: `CV đã quét:\n${JSON.stringify(
       cvData,
     )}\n\nDanh sách JD đã cập nhật:\n${JSON.stringify(jdData.jobs)}`,
@@ -98,19 +93,13 @@ Không cộng điểm cho kỹ năng không xuất hiện trong CV. Lý do phả
       const job = jobById.get(match.jobId);
       if (!job) return null;
       const scoreDetail = {
-        internWishes: clamp(Math.round(match.internWishes), 0, 42),
+        internWishes: clamp(Math.round(match.internWishes), 0, 40),
         employerRequirements: clamp(
           Math.round(match.employerRequirements),
           0,
-          38,
+          50,
         ),
         preferredSkills: clamp(Math.round(match.preferredSkills), 0, 10),
-        experience: clamp(Math.round(match.experience), 0, 7),
-        fresherEnvironment: clamp(
-          Math.round(match.fresherEnvironment),
-          0,
-          3,
-        ),
       };
       const score = clamp(
         Object.values(scoreDetail).reduce((sum, value) => sum + value, 0),
@@ -152,13 +141,11 @@ Không cộng điểm cho kỹ năng không xuất hiện trong CV. Lý do phả
       (topMatches.length
         ? null
         : "Không có công ty hoặc vị trí nào phù hợp với kỹ năng trong dữ liệu hiện tại."),
-    evaluatedJobs: ranked.length,
+    evaluatedJobs: jdData.jobs.length,
     weights: {
-      internWishes: 0.42,
-      employerRequirements: 0.38,
+      internWishes: 0.4,
+      employerRequirements: 0.5,
       preferredSkills: 0.1,
-      experience: 0.07,
-      fresherEnvironment: 0.03,
     },
     evaluationSummary: result.data.evaluationSummary,
     apiUsage: result.usage,

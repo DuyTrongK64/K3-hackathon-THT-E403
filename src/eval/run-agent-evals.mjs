@@ -415,6 +415,43 @@ async function main() {
       actual,
       trace,
     );
+    if (
+      normalize(testCase.input).includes("muc luong mong muon") &&
+      trace.some((step) => step.tool === "matching")
+    ) {
+      const neutralCvInput = prepareCvInput(testCase.input);
+      neutralCvInput.text = String(neutralCvInput.text ?? "").replace(
+        /mức lương mong muốn\s*:?\s*\d+(?:[.,]\d+)?\s*triệu/gi,
+        "",
+      );
+      const neutralResult = await agent.process({
+        message: testCase.input,
+        cvInput: neutralCvInput,
+      });
+      const scoreSignature = (result) =>
+        (result.matches ?? [])
+          .map((match) => `${match.id}:${match.score}`)
+          .join("|");
+      if (scoreSignature(actual) !== scoreSignature(neutralResult)) {
+        validationReasons.push(
+          "Mức lương đã làm thay đổi kết quả xếp hạng.",
+        );
+      }
+      const rankingExplanation = normalize(
+        [
+          actual.answer,
+          ...(actual.matches ?? []).flatMap((match) => match.reasons ?? []),
+        ].join(" "),
+      );
+      if (
+        rankingExplanation.includes("luong") ||
+        rankingExplanation.includes("tro cap")
+      ) {
+        validationReasons.push(
+          "Lý do xếp hạng vẫn sử dụng thông tin lương/trợ cấp.",
+        );
+      }
+    }
     const hallucinations = detectHallucination({
       question: testCase.input,
       actualText,

@@ -253,11 +253,9 @@ function createMockMatching() {
         ? ratio(wishes, [...job.targetWishes, job.workMode])
         : 0;
       const details = {
-        internWishes: Math.round(wish * 42),
-        employerRequirements: Math.round(required * 38),
+        internWishes: Math.round(wish * 40),
+        employerRequirements: Math.round(required * 50),
         preferredSkills: Math.round(preferred * 10),
-        experience: cvData.experienceYears >= job.minimumExperience ? 7 : 0,
-        fresherEnvironment: Math.round((job.fresherFriendly / 5) * 3),
       };
       let score = Object.values(details).reduce((sum, value) => sum + value, 0);
       if (q.includes("senior reactjs tai vinai")) score = Math.min(score, 12);
