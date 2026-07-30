@@ -101,7 +101,6 @@ export async function createStructuredResponse({
         },
       },
       max_output_tokens: maxOutputTokens,
-      store: false,
     });
   } catch (error) {
     throw mapGroqError(error);

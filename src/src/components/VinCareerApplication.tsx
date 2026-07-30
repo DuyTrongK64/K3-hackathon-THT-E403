@@ -28,12 +28,10 @@ import {
   Star,
   Sun,
   Target,
-  TrendingUp,
   UploadCloud,
   Users,
   X,
   XCircle,
-  Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -358,7 +356,10 @@ export default function Home() {
   const [toast, setToast] = useState("");
   const [uploadedCv, setUploadedCv] = useState<UploadedCv | null>(null);
   const [uploadedCvFile, setUploadedCvFile] = useState<File | null>(null);
-  const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
+  const chatMessagesRef = useRef<HTMLDivElement | null>(null);
+  const floatingChatMessagesRef = useRef<HTMLDivElement | null>(null);
+  const floatingChatInputRef = useRef<HTMLInputElement | null>(null);
   const cvInputRef = useRef<HTMLInputElement | null>(null);
   const messageIdRef = useRef(2);
   const chatBusyRef = useRef(false);
@@ -405,8 +406,28 @@ export default function Home() {
   }, [experience, fitTarget, selectedSkills]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [agentSteps, chatMessages, isTyping]);
+    const frame = window.requestAnimationFrame(() => {
+      [chatMessagesRef.current, floatingChatMessagesRef.current].forEach(
+        (container) => {
+          container?.scrollTo({
+            top: container.scrollHeight,
+            behavior: "smooth",
+          });
+        },
+      );
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [agentSteps, chatMessages, isFloatingChatOpen, isTyping]);
+
+  useEffect(() => {
+    if (!isFloatingChatOpen) return;
+    floatingChatInputRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsFloatingChatOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isFloatingChatOpen]);
 
   useEffect(() => {
     if (!toast) return;
@@ -416,6 +437,7 @@ export default function Home() {
 
   const navigateTo = (tab: TabId) => {
     setActiveTab(tab);
+    if (tab === "chat") setIsFloatingChatOpen(false);
     setMobileMenuOpen(false);
     setShowSearch(false);
     window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 20);
@@ -806,46 +828,16 @@ export default function Home() {
               >
                 <div className="dashboard-top">
                   <div>
-                    <span className="micro-label">CAREER SNAPSHOT</span>
-                    <h3>Cơ hội dành cho bạn</h3>
+                    <span className="micro-label">DANH SÁCH CÔNG TY</span>
+                    <h3>Khám phá hệ sinh thái công nghệ</h3>
                   </div>
                   <div className="dashboard-status">
-                    <span /> Cập nhật hôm nay
+                    <span /> {companies.length} công ty
                   </div>
                 </div>
 
-                <div className="match-card">
-                  <div className="match-card__visual">
-                    <svg viewBox="0 0 120 120" aria-label="Điểm phù hợp 86%">
-                      <circle cx="60" cy="60" r="49" className="ring-base" />
-                      <circle cx="60" cy="60" r="49" className="ring-value" />
-                    </svg>
-                    <div>
-                      <strong>86</strong>
-                      <span>Fit score</span>
-                    </div>
-                  </div>
-                  <div className="match-card__copy">
-                    <span>TOP MATCH CỦA BẠN</span>
-                    <h4>Frontend Engineer</h4>
-                    <p>One Mount Group · Hà Nội</p>
-                    <div>
-                      <span>React</span><span>TypeScript</span><span>GCP</span>
-                    </div>
-                  </div>
-                  <button onClick={() => openCompany(companies.find((item) => item.id === "onemount"))}>
-                    <ExternalLink size={17} />
-                  </button>
-                </div>
-
-                <div className="dashboard-section-title">
-                  <span>Công ty đang tuyển</span>
-                  <button onClick={() => document.getElementById("companies")?.scrollIntoView({ behavior: "smooth" })}>
-                    Xem tất cả <ChevronRight size={14} />
-                  </button>
-                </div>
-                <div className="dashboard-company-list">
-                  {companies.slice(0, 3).map((company, index) => (
+                <div className="dashboard-company-list dashboard-company-list--full">
+                  {companies.map((company) => (
                     <button key={company.id} onClick={() => openCompany(company)}>
                       <span
                         className="company-mini-logo"
@@ -855,24 +847,33 @@ export default function Home() {
                       </span>
                       <span>
                         <strong>{company.name}</strong>
-                        <small>{company.openRoles} vị trí · {company.location}</small>
+                        <small>{company.division} · {company.location}</small>
+                        <span className="company-mini-tech">
+                          {company.tech.slice(0, 3).map((tech) => (
+                            <em key={tech}>{tech}</em>
+                          ))}
+                        </span>
                       </span>
-                      <span className={index === 0 ? "trend trend--hot" : "trend"}>
-                        {index === 0 ? <Zap size={11} /> : <TrendingUp size={11} />}
-                        {index === 0 ? "HOT" : `+${12 - index * 3}%`}
+                      <span className="company-open-role">
+                        <strong>{company.openRoles}</strong>
+                        <small>vị trí</small>
                       </span>
+                      <ChevronRight size={16} />
                     </button>
                   ))}
                 </div>
 
-                <div className="floating-note floating-note--one">
-                  <CheckCircle2 size={18} />
-                  <span><strong>CV đã sẵn sàng!</strong>87% tương thích ATS</span>
-                </div>
-                <div className="floating-note floating-note--two">
-                  <Sparkles size={18} />
-                  <span><strong>AI Insight</strong>3 kỹ năng nên bổ sung</span>
-                </div>
+                <button
+                  className="dashboard-directory-action"
+                  onClick={() =>
+                    document
+                      .getElementById("companies")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                >
+                  Xem hồ sơ chi tiết tất cả công ty
+                  <ArrowRight size={15} />
+                </button>
               </motion.div>
             </section>
 
@@ -1162,7 +1163,11 @@ export default function Home() {
                     Cuộc trò chuyện mới
                   </button>
                 </div>
-                <div className="chat-messages" aria-live="polite">
+                <div
+                  className="chat-messages"
+                  aria-live="polite"
+                  ref={chatMessagesRef}
+                >
                   {chatMessages.map((message) => {
                     const resultCompany = message.resultCompanyId
                       ? companies.find((company) => company.id === message.resultCompanyId)
@@ -1265,7 +1270,6 @@ export default function Home() {
                       </div>
                     </motion.div>
                   )}
-                  <div ref={chatEndRef} />
                 </div>
                 <form
                   className="chat-composer"
@@ -1584,6 +1588,159 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating assistant — available outside the dedicated Q&A page */}
+      {activeTab !== "chat" && (
+        <div className="floating-chat-root">
+          <AnimatePresence>
+            {isFloatingChatOpen && (
+              <motion.section
+                className="floating-chat-panel"
+                role="dialog"
+                aria-modal="false"
+                aria-label="Trợ lý VinCareer AI"
+                initial={{ opacity: 0, y: 18, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 14, scale: 0.97 }}
+                transition={{ duration: 0.22 }}
+              >
+                <div className="floating-chat-header">
+                  <div className="assistant-avatar">
+                    <Bot size={19} />
+                  </div>
+                  <span>
+                    <strong>VinCareer Assistant</strong>
+                    <small><i /> Groq đang trực tuyến</small>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsFloatingChatOpen(false)}
+                    aria-label="Đóng chatbot"
+                  >
+                    <X size={17} />
+                  </button>
+                </div>
+
+                <div
+                  className="floating-chat-messages"
+                  ref={floatingChatMessagesRef}
+                  aria-live="polite"
+                >
+                  {chatMessages.map((message) => {
+                    const resultCompany = message.resultCompanyId
+                      ? companies.find(
+                          (company) => company.id === message.resultCompanyId,
+                        )
+                      : null;
+                    return (
+                      <motion.div
+                        key={`floating-${message.id}`}
+                        className={`floating-message floating-message--${message.role}`}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        <span>
+                          {message.role === "assistant"
+                            ? "VinCareer AI"
+                            : "Bạn"}
+                        </span>
+                        <p>{message.content}</p>
+                        {resultCompany && (
+                          <button
+                            type="button"
+                            onClick={() => openCompany(resultCompany)}
+                          >
+                            {resultCompany.name} · {message.fitScore ?? 80}%
+                            phù hợp
+                            <ExternalLink size={13} />
+                          </button>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                  {isTyping && (
+                    <div className="floating-message floating-message--assistant">
+                      <span>
+                        {agentSteps.at(-1)?.message ??
+                          "VinCareer AI đang phân tích..."}
+                      </span>
+                      <div className="typing-dots"><i /><i /><i /></div>
+                    </div>
+                  )}
+                </div>
+
+                {chatMessages.length <= 1 && (
+                  <div className="floating-chat-suggestions">
+                    {suggestions.slice(0, 2).map((suggestion) => (
+                      <button
+                        type="button"
+                        key={`floating-${suggestion}`}
+                        onClick={() => sendChat(suggestion)}
+                        disabled={isTyping || agentRunning}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <form
+                  className="floating-chat-composer"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    sendChat();
+                  }}
+                >
+                  <input
+                    ref={floatingChatInputRef}
+                    value={chatInput}
+                    onChange={(event) => setChatInput(event.target.value)}
+                    placeholder="Hỏi về công ty, JD, kỹ năng..."
+                    aria-label="Câu hỏi nhanh cho VinCareer AI"
+                    disabled={isTyping || agentRunning}
+                  />
+                  <button
+                    type="submit"
+                    aria-label="Gửi câu hỏi nhanh"
+                    disabled={isTyping || agentRunning}
+                  >
+                    <Send size={17} />
+                  </button>
+                </form>
+                <button
+                  type="button"
+                  className="floating-chat-open-page"
+                  onClick={() => navigateTo("chat")}
+                >
+                  Mở trang Trợ lý AI
+                  <ArrowRight size={14} />
+                </button>
+              </motion.section>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            type="button"
+            className={
+              isFloatingChatOpen
+                ? "floating-chat-launcher is-open"
+                : "floating-chat-launcher"
+            }
+            onClick={() => setIsFloatingChatOpen((current) => !current)}
+            aria-label={
+              isFloatingChatOpen
+                ? "Đóng trợ lý VinCareer AI"
+                : "Mở trợ lý VinCareer AI"
+            }
+            aria-expanded={isFloatingChatOpen}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.96 }}
+          >
+            {isFloatingChatOpen ? <ChevronDown size={22} /> : <Bot size={23} />}
+            {!isFloatingChatOpen && <span>Hỏi VinCareer AI</span>}
+          </motion.button>
+        </div>
+      )}
 
       {/* Toast & footer */}
       <AnimatePresence>
