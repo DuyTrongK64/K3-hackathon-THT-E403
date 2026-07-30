@@ -1,4 +1,4 @@
-import { createStructuredResponse } from "./openaiClient";
+import { createStructuredResponse } from "./groqClient";
 
 const clamp = (value, minimum, maximum) =>
   Math.min(maximum, Math.max(minimum, value));
@@ -53,7 +53,7 @@ const MATCH_SCHEMA = {
 };
 
 /**
- * TOOL 3 — Matching Engine powered by OpenAI.
+ * TOOL 3 — Matching Engine powered by Groq.
  * Điểm chỉ dựa trên mong muốn ứng viên và mức khớp kỹ năng với yêu cầu JD.
  * Lương, trợ cấp, kinh nghiệm và độ cạnh tranh không tham gia xếp hạng.
  */

@@ -442,8 +442,8 @@ export default function Home() {
     if (!file) return;
 
     const extension = file.name.split(".").pop()?.toLowerCase();
-    if (!extension || !["pdf", "doc", "docx"].includes(extension)) {
-      setToast("CV cần có định dạng PDF, DOC hoặc DOCX.");
+    if (!extension || !["pdf", "docx"].includes(extension)) {
+      setToast("CV cần có định dạng PDF hoặc DOCX.");
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
@@ -555,7 +555,7 @@ export default function Home() {
         data-testid="cv-file-input"
         className="sr-only-file"
         type="file"
-        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         onChange={handleCvUpload}
         aria-label="Chọn tệp CV"
       />

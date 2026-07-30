@@ -55,22 +55,32 @@ export function useCareerAgent() {
             "Hệ thống không thể đọc nội dung file này. Vui lòng dùng PDF hoặc DOCX chuẩn.",
           CV_NO_SKILLS_FOUND:
             "CV chưa có kỹ năng đủ rõ để thực hiện đánh giá.",
-          OPENAI_API_KEY_MISSING:
-            "Server chưa có OPENAI_API_KEY. Hãy thêm key vào .env.local rồi khởi động lại.",
-          OPENAI_INSUFFICIENT_QUOTA:
-            "API key đã được nhận nhưng project OpenAI chưa có credit, đã hết quota hoặc chạm giới hạn chi tiêu.",
-          OPENAI_AUTHENTICATION_FAILED:
-            "OpenAI từ chối API key. Hãy kiểm tra key còn hiệu lực và thuộc đúng project.",
-          OPENAI_MODEL_NOT_AVAILABLE:
-            "Project chưa dùng được model đã cấu hình. Hãy đổi OPENAI_MODEL rồi khởi động lại.",
-          OPENAI_RATE_LIMITED:
-            "OpenAI đang giới hạn tần suất yêu cầu. Vui lòng chờ rồi thử lại.",
-          OPENAI_CONNECTION_ERROR:
-            "Server không thể kết nối tới OpenAI.",
-          OPENAI_BAD_REQUEST:
-            "OpenAI từ chối cấu trúc request. Hãy kiểm tra model và Structured Output.",
+          GROQ_API_KEY_MISSING:
+            "Server chưa có GROQ_API_KEY. Hãy thêm key vào .env.local rồi khởi động lại.",
+          GROQ_ACCESS_BLOCKED:
+            "Groq đã chặn API access do giới hạn chi tiêu hoặc cấu hình tài khoản.",
+          GROQ_AUTHENTICATION_FAILED:
+            "Groq từ chối API key. Hãy kiểm tra key còn hiệu lực và thuộc đúng project.",
+          GROQ_PERMISSION_DENIED:
+            "Project Groq chưa có quyền sử dụng model đã cấu hình.",
+          GROQ_MODEL_NOT_AVAILABLE:
+            "Model chưa khả dụng. Hãy đổi GROQ_MODEL rồi khởi động lại.",
+          GROQ_RATE_LIMITED:
+            "Groq đang giới hạn tần suất hoặc token. Vui lòng chờ rồi thử lại.",
+          GROQ_REQUEST_TOO_LARGE:
+            "Yêu cầu gửi tới Groq quá lớn. Hãy dùng CV ngắn hơn.",
+          GROQ_UNPROCESSABLE_OUTPUT:
+            "Groq không thể tạo kết quả đúng cấu trúc. Vui lòng thử lại.",
+          GROQ_CAPACITY_EXCEEDED:
+            "Groq đang hết capacity tạm thời. Vui lòng thử lại sau.",
+          GROQ_CONNECTION_ERROR:
+            "Server không thể kết nối tới Groq.",
+          GROQ_BAD_REQUEST:
+            "Groq từ chối cấu trúc request. Hãy kiểm tra model và Structured Output.",
           CV_FILE_TOO_LARGE: "CV vượt quá giới hạn 8 MB.",
           CV_FILE_READ_FAILED: "Không thể đọc file CV đã chọn.",
+          CV_FILE_UNSUPPORTED:
+            "Groq flow hiện hỗ trợ CV dạng PDF hoặc DOCX. File DOC cũ chưa được hỗ trợ.",
           AGENT_API_ERROR:
             caughtError?.detail ??
             "Không thể kết nối Agent API. Vui lòng thử lại.",

@@ -1,45 +1,48 @@
 import OpenAI from "openai";
 
-const DEFAULT_MODEL = "gpt-5.6-luna";
+const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
+const DEFAULT_MODEL = "openai/gpt-oss-20b";
 
 let client;
 
-function mapOpenAIError(error) {
+function mapGroqError(error) {
   const providerCode = error?.code ?? error?.error?.code ?? "";
   const providerType = error?.type ?? error?.error?.type ?? "";
   const status = Number(error?.status ?? 0);
-  let code = "OPENAI_REQUEST_FAILED";
+  let code = "GROQ_REQUEST_FAILED";
 
   if (
-    providerCode === "insufficient_quota" ||
-    providerType === "insufficient_quota" ||
-    [
-      "credit_balance_exhausted",
-      "organization_spend_limit_exceeded",
-      "project_spend_limit_exceeded",
-      "organization_usage_limit_exceeded",
-    ].includes(providerCode)
+    providerCode === "blocked_api_access" ||
+    providerType === "blocked_api_access"
   ) {
-    code = "OPENAI_INSUFFICIENT_QUOTA";
+    code = "GROQ_ACCESS_BLOCKED";
   } else if (status === 401 || providerCode === "invalid_api_key") {
-    code = "OPENAI_AUTHENTICATION_FAILED";
+    code = "GROQ_AUTHENTICATION_FAILED";
+  } else if (status === 403) {
+    code = "GROQ_PERMISSION_DENIED";
   } else if (
     providerCode === "model_not_found" ||
     status === 404
   ) {
-    code = "OPENAI_MODEL_NOT_AVAILABLE";
+    code = "GROQ_MODEL_NOT_AVAILABLE";
   } else if (
     status === 429 ||
     providerCode === "rate_limit_exceeded"
   ) {
-    code = "OPENAI_RATE_LIMITED";
+    code = "GROQ_RATE_LIMITED";
+  } else if (status === 413) {
+    code = "GROQ_REQUEST_TOO_LARGE";
+  } else if (status === 422) {
+    code = "GROQ_UNPROCESSABLE_OUTPUT";
+  } else if (status === 498) {
+    code = "GROQ_CAPACITY_EXCEEDED";
   } else if (
     error?.name === "APIConnectionError" ||
     String(error?.message).includes("Connection error")
   ) {
-    code = "OPENAI_CONNECTION_ERROR";
+    code = "GROQ_CONNECTION_ERROR";
   } else if (status === 400) {
-    code = "OPENAI_BAD_REQUEST";
+    code = "GROQ_BAD_REQUEST";
   }
 
   const mapped = new Error(code);
@@ -48,18 +51,19 @@ function mapOpenAIError(error) {
   return mapped;
 }
 
-export function getOpenAIClient() {
+export function getGroqClient() {
   if (typeof window !== "undefined") {
-    throw new Error("OPENAI_SERVER_ONLY");
+    throw new Error("GROQ_SERVER_ONLY");
   }
 
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  const apiKey = process.env.GROQ_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY_MISSING");
+    throw new Error("GROQ_API_KEY_MISSING");
   }
 
   client ??= new OpenAI({
     apiKey,
+    baseURL: GROQ_BASE_URL,
     timeout: 60_000,
     maxRetries: 2,
   });
@@ -67,8 +71,8 @@ export function getOpenAIClient() {
   return client;
 }
 
-export function getOpenAIModel() {
-  return process.env.OPENAI_MODEL?.trim() || DEFAULT_MODEL;
+export function getGroqModel() {
+  return process.env.GROQ_MODEL?.trim() || DEFAULT_MODEL;
 }
 
 export async function createStructuredResponse({
@@ -79,17 +83,16 @@ export async function createStructuredResponse({
   tools,
   maxOutputTokens = 3000,
 }) {
-  const openai = getOpenAIClient();
+  const groq = getGroqClient();
   let response;
   try {
-    response = await openai.responses.create({
-      model: getOpenAIModel(),
+    response = await groq.responses.create({
+      model: getGroqModel(),
       instructions,
       input,
-      tools,
+      ...(tools?.length ? { tools } : {}),
       reasoning: { effort: "low" },
       text: {
-        verbosity: "low",
         format: {
           type: "json_schema",
           name,
@@ -101,11 +104,11 @@ export async function createStructuredResponse({
       store: false,
     });
   } catch (error) {
-    throw mapOpenAIError(error);
+    throw mapGroqError(error);
   }
 
   if (!response.output_text?.trim()) {
-    throw new Error("OPENAI_EMPTY_RESPONSE");
+    throw new Error("GROQ_EMPTY_RESPONSE");
   }
 
   try {
@@ -116,6 +119,6 @@ export async function createStructuredResponse({
       model: response.model,
     };
   } catch {
-    throw new Error("OPENAI_INVALID_JSON");
+    throw new Error("GROQ_INVALID_JSON");
   }
 }

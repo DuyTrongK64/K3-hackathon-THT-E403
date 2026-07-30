@@ -1,7 +1,7 @@
 import { crawlJobData } from "./crawlerTool";
 import { scanCvInput } from "./cvScannerTool";
 import { calculateTopMatches } from "./matchingTool";
-import { createStructuredResponse } from "./openaiClient";
+import { createStructuredResponse } from "./groqClient";
 import { createAgentRouter } from "./agentRouterCore";
 import {
   createGroundedCareerAnswer,

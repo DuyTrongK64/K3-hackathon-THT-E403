@@ -1,6 +1,6 @@
 import companiesCsv from "../data/companies.csv?raw";
 import careerPagesCsv from "../data/careerPages.csv?raw";
-import { createStructuredResponse } from "./openaiClient";
+import { createStructuredResponse } from "./groqClient";
 
 function parseCsvLine(line) {
   const values = [];
@@ -141,8 +141,8 @@ function buildSeedData() {
 }
 
 /**
- * TOOL 1 — Real crawler powered by OpenAI Web Search.
- * CSV local chỉ đóng vai trò danh sách seed để Agent biết phạm vi cần tra cứu.
+ * TOOL 1 — Crawler/cleaner powered by Groq and grounded in local CSV seeds.
+ * Không bật browser tool cùng Structured Output để tránh lỗi tương thích.
  */
 export async function crawlJobData({ onStatus } = {}) {
   onStatus?.({
@@ -155,27 +155,15 @@ export async function crawlJobData({ onStatus } = {}) {
   onStatus?.({
     tool: "crawler",
     state: "running",
-    message: "Crawler đang tra cứu và làm sạch JD bằng OpenAI Web Search...",
+    message: "Crawler đang làm sạch dữ liệu JD bằng Groq...",
   });
 
   const result = await createStructuredResponse({
     name: "vincareer_crawled_jobs",
     schema: CRAWLER_SCHEMA,
-    tools: [
-      {
-        type: "web_search",
-        search_context_size: "medium",
-        user_location: {
-          type: "approximate",
-          country: "VN",
-          timezone: "Asia/Ho_Chi_Minh",
-        },
-      },
-    ],
     instructions: `Bạn là Tool Crawler của VinCareer Insight AI.
-Tra cứu web để kiểm chứng và cập nhật thông tin tuyển thực tập/fresher cho các công ty trong dữ liệu seed.
-Chỉ trả về dữ liệu có ích cho sinh viên công nghệ. Không bịa URL tuyển dụng.
-Nếu chưa tìm thấy JD đang mở, vẫn chuẩn hóa JD seed nhưng sourceUrl phải là trang nghề nghiệp hoặc website công ty hợp lệ tìm được.
+Làm sạch và chuẩn hóa dữ liệu tuyển thực tập/fresher từ dữ liệu seed được cung cấp.
+Chỉ dùng dữ liệu seed, không bổ sung hoặc suy đoán công ty, JD, kỹ năng, URL hay chính sách.
 Giữ seedId để hệ thống ghép lại slots/applicants nội bộ. Viết nội dung tiếng Việt ngắn gọn.`,
     input: `Dữ liệu seed cần kiểm chứng và làm sạch:\n${JSON.stringify(
       seed.jobs,

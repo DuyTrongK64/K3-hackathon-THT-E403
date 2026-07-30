@@ -2,16 +2,33 @@
 
 const MAX_CV_SIZE = 8 * 1024 * 1024;
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const value = String(reader.result ?? "");
-      resolve(value.includes(",") ? value.split(",")[1] : value);
-    };
-    reader.onerror = () => reject(new Error("CV_FILE_READ_FAILED"));
-    reader.readAsDataURL(file);
+async function extractPdfText(file) {
+  const { extractText, getDocumentProxy } = await import("unpdf");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const pdf = await getDocumentProxy(bytes);
+  const result = await extractText(pdf, { mergePages: true });
+  return String(result.text ?? "").trim();
+}
+
+async function extractDocxText(file) {
+  const mammothModule = await import("mammoth");
+  const mammoth = mammothModule.default ?? mammothModule;
+  const result = await mammoth.extractRawText({
+    arrayBuffer: await file.arrayBuffer(),
   });
+  return String(result.value ?? "").trim();
+}
+
+async function extractCvText(file) {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  try {
+    if (extension === "pdf") return await extractPdfText(file);
+    if (extension === "docx") return await extractDocxText(file);
+    throw new Error("CV_FILE_UNSUPPORTED");
+  } catch (error) {
+    if (error?.message === "CV_FILE_UNSUPPORTED") throw error;
+    throw new Error("CV_FILE_READ_FAILED");
+  }
 }
 
 async function serializeCvInput(cvInput = {}) {
@@ -22,12 +39,14 @@ async function serializeCvInput(cvInput = {}) {
   if (file.size > MAX_CV_SIZE) {
     throw new Error("CV_FILE_TOO_LARGE");
   }
+  const extractedText = await extractCvText(file);
+  if (!extractedText) throw new Error("CV_UNREADABLE_CONTENT");
 
   return {
-    text: cvInput.text ?? "",
+    text: [cvInput.text, extractedText].filter(Boolean).join("\n\n"),
     fileName: file.name,
     fileType: file.type,
-    fileData: await fileToBase64(file),
+    fileData: "",
   };
 }
 
@@ -87,4 +106,3 @@ export async function requestCareerAgent(
   }
   return result;
 }
-

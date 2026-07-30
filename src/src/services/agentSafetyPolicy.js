@@ -62,7 +62,7 @@ export function evaluateAgentPreflight(message, cvInput = {}) {
     return {
       intent: "cv_format_error",
       answer:
-        "Hệ thống không thể đọc nội dung file này. Hệ thống chỉ hỗ trợ CV định dạng văn bản PDF, DOC hoặc DOCX; vui lòng tải lại file đúng định dạng.",
+        "Hệ thống không thể đọc nội dung file này. Hệ thống chỉ hỗ trợ CV định dạng văn bản PDF hoặc DOCX; vui lòng tải lại file đúng định dạng.",
     };
   }
 

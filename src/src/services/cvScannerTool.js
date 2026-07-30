@@ -1,4 +1,4 @@
-import { createStructuredResponse } from "./openaiClient";
+import { createStructuredResponse } from "./groqClient";
 
 const CV_SCHEMA = {
   type: "object",
@@ -41,7 +41,7 @@ const CV_SCHEMA = {
 };
 
 /**
- * TOOL 2 — CV scanner powered by OpenAI file/text understanding.
+ * TOOL 2 — CV scanner powered by Groq after local PDF/DOCX text extraction.
  */
 export async function scanCvInput(
   { file = null, text = "", fileData = "", fileName = "" } = {},
@@ -57,26 +57,11 @@ export async function scanCvInput(
   onStatus?.({
     tool: "cvScanner",
     state: "running",
-    message: "CV Scanner đang đọc nội dung hồ sơ bằng OpenAI...",
+    message: "CV Scanner đang đọc nội dung hồ sơ bằng Groq...",
   });
 
-  const content = [
-    {
-      type: "input_text",
-      text: `Phân tích CV ứng viên thực tập. Nội dung người dùng dán:\n${
-        String(text).trim() || "(không có)"
-      }`,
-    },
-  ];
-
-  if (resolvedFileData) {
-    content.push({
-      type: "input_file",
-      filename: resolvedFileName || "candidate-cv.pdf",
-      file_data: resolvedFileData,
-      detail: "low",
-    });
-  }
+  const extractedText = String(text).trim();
+  if (!extractedText) throw new Error("CV_UNREADABLE_CONTENT");
 
   const result = await createStructuredResponse({
     name: "vincareer_cv_profile",
@@ -88,7 +73,7 @@ Chuẩn hóa tên kỹ năng (React, TypeScript, Python, PyTorch, SQL...).
 experienceYears là tổng kinh nghiệm liên quan, có thể là số thập phân.
 Suy ra mong muốn nghề nghiệp thận trọng từ mục tiêu, dự án và nội dung CV.
 Trả nội dung tiếng Việt, ngắn gọn và phù hợp ứng viên intern/fresher.`,
-    input: [{ role: "user", content }],
+    input: `Tên file: ${resolvedFileName || "(dán text trực tiếp)"}\n\nNội dung CV:\n${extractedText}`,
     maxOutputTokens: 2200,
   });
 
@@ -102,7 +87,7 @@ Trả nội dung tiếng Việt, ngắn gọn và phù hợp ứng viên intern/
   const candidateId = `candidate-${Date.now()}`;
   const profile = {
     candidateId,
-    source: resolvedFileData ? "uploaded_file" : "pasted_text",
+    source: resolvedFileName ? "uploaded_file" : "pasted_text",
     fileName: resolvedFileName || null,
     skills: result.data.skills,
     experienceYears: Math.max(0, Number(result.data.experienceYears ?? 0)),

@@ -483,12 +483,12 @@ export default function CareerJourneyFeatures() {
     event.target.value = "";
     if (!file) return;
     const extension = file.name.split(".").pop()?.toLowerCase();
-    if (!extension || !["pdf", "doc", "docx"].includes(extension)) {
-      showToast("Vui lòng chọn CV định dạng PDF, DOC hoặc DOCX.");
+    if (!extension || !["pdf", "docx"].includes(extension)) {
+      showToast("Vui lòng chọn CV định dạng PDF hoặc DOCX.");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      showToast("Dung lượng CV tối đa là 10 MB.");
+    if (file.size > 8 * 1024 * 1024) {
+      showToast("Dung lượng CV tối đa là 8 MB.");
       return;
     }
     setCvFile(file);
@@ -806,7 +806,7 @@ export default function CareerJourneyFeatures() {
                     </div>
                   </div>
                   <span className="mock-badge">
-                    <ShieldCheck size={13} /> OpenAI Analysis
+                    <ShieldCheck size={13} /> Groq Analysis
                   </span>
                 </div>
 
@@ -843,7 +843,7 @@ export default function CareerJourneyFeatures() {
                   >
                     <input
                       type="file"
-                      accept=".pdf,.doc,.docx"
+                      accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                       onChange={handleCvFile}
                     />
                     {cvFileName ? (
@@ -856,7 +856,7 @@ export default function CareerJourneyFeatures() {
                       <>
                         <UploadCloud size={30} />
                         <strong>Kéo thả hoặc chọn CV từ thiết bị</strong>
-                        <span>Hỗ trợ PDF, DOC, DOCX · Tối đa 8 MB</span>
+                        <span>Hỗ trợ PDF, DOCX · Tối đa 8 MB</span>
                       </>
                     )}
                   </label>
@@ -900,7 +900,7 @@ export default function CareerJourneyFeatures() {
                     <Clock3 size={13} /> Thời gian tùy độ dài CV
                   </span>
                   <span>
-                    <Bot size={13} /> Phân tích bằng OpenAI API
+                    <Bot size={13} /> Phân tích bằng Groq API
                   </span>
                 </div>
               </div>
@@ -922,7 +922,7 @@ export default function CareerJourneyFeatures() {
                       <h3>Đang đọc hồ sơ và đối chiếu cơ hội...</h3>
                       <p>
                         {agentSteps.at(-1)?.message ??
-                          "OpenAI đang nhận diện kỹ năng, kinh nghiệm và domain."}
+                          "Groq đang nhận diện kỹ năng, kinh nghiệm và domain."}
                       </p>
                       <div className="agent-tool-trace">
                         {agentSteps.slice(-3).map((step) => (

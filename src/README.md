@@ -12,9 +12,21 @@ Drizzle support.
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 npm run build
 ```
+
+Add your Groq key to `.env.local` before starting the app:
+
+```dotenv
+GROQ_API_KEY=gsk_your-real-groq-api-key
+GROQ_MODEL=openai/gpt-oss-20b
+```
+
+The same server-side key is shared by the Agent Router, Crawler, CV Scanner,
+and Matching Engine. Uploaded PDF/DOCX files are converted to text locally
+before their extracted content is sent to Groq.
 
 This starter does not use `wrangler.jsonc`.
 
