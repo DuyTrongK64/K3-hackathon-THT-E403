@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterator
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -38,3 +39,14 @@ async def init_database() -> None:
 
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+        # Upgrade databases created by the previous frontend-only prototype.
+        # A formal migration system can replace this additive bootstrap later.
+        await connection.execute(
+            text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "password_hash VARCHAR(255) NOT NULL DEFAULT ''"
+            )
+        )
+        await connection.execute(
+            text("UPDATE users SET role = 'user' WHERE role = 'student'")
+        )

@@ -42,3 +42,22 @@ class CompanyRead(CompanyBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+
+
+class CompanyOpportunity(BaseModel):
+    position: str
+    department: str
+    team_name: str
+    work_mode: str
+
+
+class CompanyAnalysis(BaseModel):
+    company_id: uuid.UUID
+    company_name: str
+    business_direction: str
+    company_requirements: list[str] = Field(default_factory=list)
+    focus_areas: list[str] = Field(default_factory=list)
+    tech_stack: list[str] = Field(default_factory=list)
+    work_environment: str
+    current_opportunities: list[CompanyOpportunity] = Field(default_factory=list)
+    source: str

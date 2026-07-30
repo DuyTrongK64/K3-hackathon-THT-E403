@@ -6,7 +6,9 @@ from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Company, EvaluationCriterion
+from app.core.config import get_settings
+from app.core.security import hash_password, verify_password
+from app.models import Company, EvaluationCriterion, User
 
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -35,6 +37,48 @@ DEFAULT_CRITERIA = [
     },
 ]
 
+INTERVIEW_PROCESS = [
+    {
+        "title": "CV & Motivation Screening",
+        "detail": "Trao đổi về dự án, mục tiêu thực tập và mức phù hợp với team.",
+    },
+    {
+        "title": "Technical Interview",
+        "detail": "Kiểm tra nền tảng, coding và cách giải quyết bài toán theo vị trí.",
+    },
+    {
+        "title": "Team Fit & Offer",
+        "detail": "Trao đổi với quản lý về cách cộng tác, lộ trình học và kỳ vọng.",
+    },
+]
+
+COMPANY_NOTES = {
+    "vinfast": {
+        "pros": ["Sản phẩm quy mô lớn", "Va chạm nhiều hệ thống", "Domain toàn cầu"],
+        "cons": ["Nhịp độ nhanh", "Một số team onsite"],
+    },
+    "vinai": {
+        "pros": ["Mentor AI chuyên sâu", "Bài toán nghiên cứu thực tế"],
+        "cons": ["Yêu cầu nền tảng cao", "Cần chủ động đọc paper"],
+    },
+    "vinbigdata": {
+        "pros": ["Dữ liệu quy mô lớn", "Lộ trình Data/AI rõ ràng"],
+        "cons": ["Pipeline phức tạp", "Cần Python/SQL chắc"],
+    },
+    "onemount": {
+        "pros": ["Product mindset rõ", "Phản hồi nhanh", "Thân thiện Fresher"],
+        "cons": ["Nhịp release nhanh", "Cần giao tiếp chủ động"],
+    },
+    "vinbrain": {
+        "pros": ["Bài toán HealthTech có tác động", "Quy trình sản phẩm chặt chẽ"],
+        "cons": ["Domain y tế cần học thêm", "Tiêu chuẩn chất lượng cao"],
+    },
+    "vincss": {
+        "pros": ["Bài toán an toàn thông tin thực tế", "Tiếp xúc IoT và Identity"],
+        "cons": ["Cần nền tảng hệ thống", "Một số vị trí onsite"],
+    },
+}
+
 
 def _split(value: str) -> list[str]:
     return [item.strip() for item in (value or "").split("|") if item.strip()]
@@ -60,6 +104,18 @@ async def seed_database(session: AsyncSession) -> None:
                         "work_mode": row["work_mode"],
                         "slots": int(row["slots"] or 0),
                         "applicants": int(row["applicants"] or 0),
+                        "responsibilities": [
+                            f"Tham gia phát triển và kiểm thử cho vị trí {row['position']}.",
+                            "Phối hợp cùng mentor và các thành viên trong project team.",
+                            "Viết tài liệu, review code và báo cáo tiến độ theo sprint.",
+                        ],
+                        "interview_process": INTERVIEW_PROCESS,
+                        "pros": COMPANY_NOTES.get(
+                            row["company_id"], {}
+                        ).get("pros", []),
+                        "cons": COMPANY_NOTES.get(
+                            row["company_id"], {}
+                        ).get("cons", []),
                     }
                 )
         with (DATA_DIR / "companies.csv").open(encoding="utf-8") as file:
@@ -92,11 +148,55 @@ async def seed_database(session: AsyncSession) -> None:
                     )
                 )
 
+    # Backfill detail fields for databases seeded by an earlier version.
+    companies = list((await session.scalars(select(Company))).all())
+    for company in companies:
+        enriched_jobs = []
+        changed = False
+        for job in company.jd_data or []:
+            next_job = dict(job)
+            defaults = {
+                "responsibilities": [
+                    f"Tham gia phát triển và kiểm thử cho vị trí "
+                    f"{job.get('position', 'thực tập sinh')}.",
+                    "Phối hợp cùng mentor và project team theo sprint.",
+                ],
+                "interview_process": INTERVIEW_PROCESS,
+                "pros": COMPANY_NOTES.get(company.slug, {}).get("pros", []),
+                "cons": COMPANY_NOTES.get(company.slug, {}).get("cons", []),
+            }
+            for key, value in defaults.items():
+                if key not in next_job:
+                    next_job[key] = value
+                    changed = True
+            enriched_jobs.append(next_job)
+        if changed:
+            company.jd_data = enriched_jobs
+
     criterion_count = await session.scalar(
         select(func.count()).select_from(EvaluationCriterion)
     )
     if not criterion_count:
         for criterion in DEFAULT_CRITERIA:
             session.add(EvaluationCriterion(**criterion))
+
+    settings = get_settings()
+    if settings.seed_admin_email and settings.seed_admin_password:
+        admin_result = await session.scalars(
+            select(User).where(User.email == settings.seed_admin_email.casefold())
+        )
+        admin = admin_result.first()
+        if not admin:
+            session.add(
+                User(
+                    email=settings.seed_admin_email.casefold(),
+                    full_name=settings.seed_admin_name,
+                    password_hash=hash_password(settings.seed_admin_password),
+                    role="admin",
+                )
+            )
+        elif not verify_password(settings.seed_admin_password, admin.password_hash):
+            admin.password_hash = hash_password(settings.seed_admin_password)
+            admin.role = "admin"
 
     await session.commit()

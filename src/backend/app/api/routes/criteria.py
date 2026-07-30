@@ -6,8 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
-from app.core.security import require_admin
-from app.models import EvaluationCriterion
+from app.core.security import get_current_user, require_admin
+from app.models import EvaluationCriterion, User
 from app.schemas import CriterionCreate, CriterionRead, CriterionUpdate
 
 
@@ -17,13 +17,14 @@ router = APIRouter(prefix="/criteria", tags=["Evaluation criteria"])
 @router.get("", response_model=list[CriterionRead])
 async def list_criteria(
     include_inactive: bool = False,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[EvaluationCriterion]:
     statement = select(EvaluationCriterion).order_by(
         EvaluationCriterion.display_order,
         EvaluationCriterion.label,
     )
-    if not include_inactive:
+    if not include_inactive or current_user.role != "admin":
         statement = statement.where(EvaluationCriterion.active.is_(True))
     result = await session.scalars(statement)
     return list(result.all())

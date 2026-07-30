@@ -5,9 +5,9 @@ import {
   ArrowLeftRight,
   ArrowRight,
   Bot,
+  Building2,
   CheckCircle2,
   FileSearch,
-  FileText,
   Sparkles,
   Target,
 } from "lucide-react";
@@ -38,8 +38,8 @@ export default function HomePage({ onNavigate }) {
             đối chiếu kỹ năng với yêu cầu tuyển dụng bằng AI có kiểm soát.
           </p>
           <div className="home-primary-actions">
-            <button className="button-primary home-cta" type="button" onClick={() => onNavigate("portfolio")}>
-              <FileText size={17} /> Tạo Portfolio từ CV <ArrowRight size={16} />
+            <button className="button-primary home-cta" type="button" onClick={() => onNavigate("companies")}>
+              <Building2 size={17} /> Khám phá công ty <ArrowRight size={16} />
             </button>
             <button className="button-secondary home-cta" type="button" onClick={() => onNavigate("comparison")}>
               <ArrowLeftRight size={17} /> So sánh công ty
@@ -62,7 +62,7 @@ export default function HomePage({ onNavigate }) {
         >
           <div className="dashboard-top">
             <div>
-              <span className="micro-label">CAREER PIPELINE</span>
+              <span className="micro-label">Danh sách công ty</span>
               <h3>Hồ sơ đến cơ hội phù hợp</h3>
             </div>
             <span className="dashboard-status"><i /> Sẵn sàng</span>

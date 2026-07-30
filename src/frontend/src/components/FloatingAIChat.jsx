@@ -22,7 +22,7 @@ const WELCOME_MESSAGE = {
   id: "welcome",
   role: "assistant",
   content:
-    "Chào bạn! Mình có thể tư vấn từ dữ liệu công ty hiện có. Hãy tải CV ở Portfolio để nhận Top 3 phù hợp.",
+    "Chào bạn! Mình có thể tư vấn từ dữ liệu công ty hiện có. Hãy mở Top công ty phù hợp để tải CV và nhận bảng xếp hạng.",
 };
 
 export default function FloatingAIChat({ portfolioId, onNavigate, notify }) {
@@ -130,8 +130,8 @@ export default function FloatingAIChat({ portfolioId, onNavigate, notify }) {
                     </div>
                   )}
                   {message.matches?.length > 0 && (
-                    <button type="button" onClick={() => onNavigate("portfolio")}>
-                      <FileText size={12} /> Xem Portfolio và kết quả
+                    <button type="button" onClick={() => onNavigate("top-matches")}>
+                      <FileText size={12} /> Xem Top công ty phù hợp
                     </button>
                   )}
                 </motion.div>
@@ -175,7 +175,7 @@ export default function FloatingAIChat({ portfolioId, onNavigate, notify }) {
               <button
                 className="floating-chat-open-page"
                 type="button"
-                onClick={() => onNavigate("portfolio")}
+                onClick={() => onNavigate("top-matches")}
               >
                 <FileText size={12} /> Tải CV để cá nhân hóa câu trả lời
               </button>

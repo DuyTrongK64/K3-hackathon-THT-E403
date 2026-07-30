@@ -10,8 +10,8 @@ UI cũ được giữ lại qua cùng design tokens, CSS classes, responsive lay
 ├── docker-compose.yml
 ├── backend/
 │   ├── app/
-│   │   ├── api/routes/       # Companies, Criteria, Portfolio, Agent, Users
-│   │   ├── core/             # Settings, database, admin security
+│   │   ├── api/routes/       # Auth, Companies, Criteria, Portfolio, Match, Agent
+│   │   ├── core/             # Settings, database, JWT & RBAC
 │   │   ├── data/             # CSV seed cho 6 công ty và JD
 │   │   ├── models/           # SQLAlchemy models
 │   │   ├── schemas/          # Pydantic request/response
@@ -23,9 +23,9 @@ UI cũ được giữ lại qua cùng design tokens, CSS classes, responsive lay
 └── frontend/
     ├── app/
     ├── src/
-    │   ├── components/FloatingAIChat.jsx
+    │   ├── components/       # FloatingAIChat, CompanyDetail, TopMatches
     │   ├── layouts/GlobalLayout.jsx
-    │   ├── views/            # Home, Comparison, Portfolio SPA views
+    │   ├── views/            # Login, Home, Companies, Comparison, Portfolio, Admin
     │   └── services/apiClient.js
     └── package.json
 ```
@@ -51,7 +51,9 @@ Sửa `backend/.env`, đặc biệt:
 
 ```dotenv
 GROQ_API_KEY=gsk_your_real_key
-ADMIN_API_KEY=your_long_random_admin_key
+JWT_SECRET_KEY=replace-with-at-least-32-random-characters
+SEED_ADMIN_EMAIL=admin@vincareer.vn
+SEED_ADMIN_PASSWORD=ChangeThisBeforeFirstStart123!
 ```
 
 Sau đó:
@@ -63,7 +65,10 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Backend tự tạo bảng và seed 6 công ty cùng tiêu chí mặc định khi database trống.
+Backend tự tạo bảng, seed 6 công ty, JD, tiêu chí mặc định và tài khoản Admin
+khi database trống. Hãy đổi thông tin Admin trước lần chạy đầu tiên; thay
+`SEED_ADMIN_PASSWORD` rồi restart Backend cũng sẽ xoay mật khẩu của tài khoản
+Admin seed.
 Swagger UI: `http://localhost:8000/docs`.
 
 ## 3. Cấu hình và chạy Frontend
@@ -82,27 +87,39 @@ Mở `http://localhost:3000`. Frontend chỉ chứa
 
 ## API cốt lõi
 
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
 - `GET /api/v1/companies`
-- `POST/PATCH/DELETE /api/v1/companies` — cần header `X-Admin-Key`
+- `GET /api/v1/companies/{id}` — chi tiết JD, team và phỏng vấn
+- `POST/PATCH/DELETE /api/v1/companies` — JWT role `admin`
 - `GET /api/v1/criteria`
-- `POST/PATCH/DELETE /api/v1/criteria` — cần header `X-Admin-Key`
+- `POST/PATCH/DELETE /api/v1/criteria` — JWT role `admin`
 - `POST /api/v1/portfolios/scan` — multipart PDF/DOCX
 - `POST /api/v1/portfolios/scan-text`
-- `GET /api/v1/portfolios/{id}`
+- `GET /api/v1/portfolios/me/latest`
+- `GET /api/v1/matches/top3/{portfolio_id}`
 - `POST /api/v1/agent/chat`
 
-Ví dụ cập nhật trọng số:
+Trừ đăng ký/đăng nhập/health, các API nghiệp vụ cần:
 
 ```bash
-curl -X PATCH http://localhost:8000/api/v1/criteria/CRITERION_UUID \
-  -H "Content-Type: application/json" \
-  -H "X-Admin-Key: your_long_random_admin_key" \
-  -d '{"weight": 0.55}'
+Authorization: Bearer YOUR_JWT
 ```
 
 Matching chỉ dùng mong muốn, kỹ năng ứng viên và yêu cầu nhà tuyển dụng; không
 dùng lương. Nếu Admin thêm một criterion key mới chưa được Matching hỗ trợ, hệ
 thống chấm phần đó bằng 0 thay vì phát sinh lỗi hoặc suy đoán dữ liệu.
+
+## Phân quyền
+
+- `user`: xem/tìm công ty, Company Detail, so sánh, tải CV, Portfolio, Top 3
+  Matching và Floating AI Chat.
+- `admin`: có toàn bộ quyền User và trang Quản trị để CRUD Companies và
+  EvaluationCriteria.
+
+Portfolio luôn được gắn với `user_id` lấy từ JWT; Frontend không được tự truyền
+ID người dùng để đọc hoặc ghi hồ sơ của tài khoản khác.
 
 ## Kiểm thử
 

@@ -81,3 +81,35 @@ def test_matching_has_no_salary_dimension() -> None:
 
     assert "salary" not in result[0]["score_detail"]
     assert all("lương" not in reason.casefold() for reason in result[0]["reasons"])
+
+
+def test_matching_returns_exact_requested_limit() -> None:
+    portfolio = Portfolio(
+        id=uuid.uuid4(),
+        source_filename="cv.pdf",
+        raw_text="React Git",
+        skills=["React", "Git"],
+        target_domains=["Product"],
+        work_modes=["Hybrid"],
+        priorities=[],
+    )
+    companies = [
+        company(f"Company{index}", ["React"], ["Product"])
+        for index in range(1, 7)
+    ]
+
+    result = rank_companies(
+        portfolio,
+        companies,
+        [criterion("required_skills", "1.0")],
+        limit=5,
+    )
+
+    assert len(result) == 5
+    assert [item["company_name"] for item in result] == [
+        "Company1",
+        "Company2",
+        "Company3",
+        "Company4",
+        "Company5",
+    ]

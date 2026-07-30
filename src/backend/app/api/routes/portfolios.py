@@ -1,11 +1,12 @@
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
+from app.core.security import get_current_user
 from app.models import Portfolio, User
 from app.schemas import PortfolioRead
 from app.services.cv_scanner_tool import scan_cv
@@ -17,7 +18,6 @@ router = APIRouter(prefix="/portfolios", tags=["Portfolios"])
 
 class CVTextRequest(BaseModel):
     text: str = Field(min_length=20, max_length=60_000)
-    user_id: uuid.UUID | None = None
 
 
 async def _save_portfolio(
@@ -25,10 +25,8 @@ async def _save_portfolio(
     session: AsyncSession,
     raw_text: str,
     source_filename: str,
-    user_id: uuid.UUID | None,
+    user_id: uuid.UUID,
 ) -> Portfolio:
-    if user_id and not await session.get(User, user_id):
-        raise HTTPException(status_code=404, detail="USER_NOT_FOUND")
     structured = await scan_cv(raw_text)
     portfolio = Portfolio(
         user_id=user_id,
@@ -55,7 +53,7 @@ async def _save_portfolio(
 )
 async def scan_portfolio_file(
     file: UploadFile = File(...),
-    user_id: uuid.UUID | None = Form(default=None),
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> Portfolio:
     raw_text = await extract_cv_text(file)
@@ -63,7 +61,7 @@ async def scan_portfolio_file(
         session=session,
         raw_text=raw_text,
         source_filename=file.filename or "cv",
-        user_id=user_id,
+        user_id=current_user.id,
     )
 
 
@@ -74,21 +72,42 @@ async def scan_portfolio_file(
 )
 async def scan_portfolio_text(
     payload: CVTextRequest,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> Portfolio:
     return await _save_portfolio(
         session=session,
         raw_text=payload.text,
         source_filename="pasted-cv.txt",
-        user_id=payload.user_id,
+        user_id=current_user.id,
     )
+
+
+@router.get("/me/latest", response_model=PortfolioRead)
+async def get_my_latest_portfolio(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> Portfolio:
+    result = await session.scalars(
+        select(Portfolio)
+        .where(Portfolio.user_id == current_user.id)
+        .order_by(Portfolio.created_at.desc())
+        .limit(1)
+    )
+    portfolio = result.first()
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="PORTFOLIO_NOT_FOUND")
+    return portfolio
 
 
 @router.get("/users/{user_id}/latest", response_model=PortfolioRead)
 async def get_latest_portfolio(
     user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> Portfolio:
+    if current_user.id != user_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="PORTFOLIO_ACCESS_DENIED")
     result = await session.scalars(
         select(Portfolio)
         .where(Portfolio.user_id == user_id)
@@ -104,9 +123,12 @@ async def get_latest_portfolio(
 @router.get("/{portfolio_id}", response_model=PortfolioRead)
 async def get_portfolio(
     portfolio_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> Portfolio:
     portfolio = await session.get(Portfolio, portfolio_id)
     if not portfolio:
         raise HTTPException(status_code=404, detail="PORTFOLIO_NOT_FOUND")
+    if portfolio.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="PORTFOLIO_ACCESS_DENIED")
     return portfolio

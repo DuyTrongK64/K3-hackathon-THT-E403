@@ -28,7 +28,13 @@ class User(TimestampMixin, Base):
         nullable=False,
     )
     full_name: Mapped[str] = mapped_column(String(160), nullable=False)
-    role: Mapped[str] = mapped_column(String(30), default="student", nullable=False)
+    password_hash: Mapped[str] = mapped_column(
+        String(255),
+        default="",
+        server_default="",
+        nullable=False,
+    )
+    role: Mapped[str] = mapped_column(String(30), default="user", nullable=False)
 
     portfolios: Mapped[list[Portfolio]] = relationship(
         back_populates="user",

@@ -67,7 +67,6 @@ function criterionValue(company, key) {
     work_environment: company.work_environment,
     locations: company.locations || [],
     fresher_score: `${company.fresher_score || 0}/5`,
-    open_roles: `${company.open_roles || 0} vị trí`,
   };
   const value = mappings[key];
   if (Array.isArray(value)) return value.length ? value.join(" · ") : "Chưa cập nhật";
