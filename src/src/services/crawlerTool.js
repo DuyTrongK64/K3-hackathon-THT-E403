@@ -1,8 +1,6 @@
 import companiesCsv from "../data/companies.csv?raw";
 import careerPagesCsv from "../data/careerPages.csv?raw";
-
-const wait = (milliseconds) =>
-  new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+import { createStructuredResponse } from "./openaiClient";
 
 function parseCsvLine(line) {
   const values = [];
@@ -52,72 +50,195 @@ const toList = (value) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const CRAWLER_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["jobs", "summary"],
+  properties: {
+    summary: { type: "string" },
+    jobs: {
+      type: "array",
+      minItems: 1,
+      maxItems: 12,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "seedId",
+          "companyName",
+          "teamName",
+          "department",
+          "position",
+          "sourceUrl",
+          "requiredSkills",
+          "preferredSkills",
+          "minimumExperience",
+          "targetWishes",
+          "workMode",
+          "cleanedDescription",
+        ],
+        properties: {
+          seedId: { type: "string" },
+          companyName: { type: "string" },
+          teamName: { type: "string" },
+          department: { type: "string" },
+          position: { type: "string" },
+          sourceUrl: { type: "string" },
+          requiredSkills: {
+            type: "array",
+            items: { type: "string" },
+          },
+          preferredSkills: {
+            type: "array",
+            items: { type: "string" },
+          },
+          minimumExperience: { type: "number" },
+          targetWishes: {
+            type: "array",
+            items: { type: "string" },
+          },
+          workMode: { type: "string" },
+          cleanedDescription: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
+function buildSeedData() {
+  const companies = parseMockCsv(companiesCsv);
+  const pages = parseMockCsv(careerPagesCsv);
+  const companyMap = new Map(
+    companies.map((company) => [company.id, company]),
+  );
+
+  return {
+    companies,
+    jobs: pages.map((page) => {
+      const company = companyMap.get(page.company_id);
+      return {
+        seedId: page.id,
+        companyId: page.company_id,
+        companyName: company?.name ?? "Công ty chưa xác định",
+        division: company?.division ?? "Technology",
+        location: toList(company?.location),
+        fresherFriendly: Number(company?.fresher_friendly ?? 0),
+        teamId: page.team_id,
+        teamName: page.team_name,
+        department: page.department,
+        position: page.position,
+        sourceUrl: page.url,
+        requiredSkills: toList(page.required_skills),
+        preferredSkills: toList(page.preferred_skills),
+        minimumExperience: Number(page.min_experience ?? 0),
+        targetWishes: toList(page.target_wishes),
+        workMode: page.work_mode,
+        maxSlots: Number(page.slots ?? 0),
+        currentApplicants: Number(page.applicants ?? 0),
+      };
+    }),
+  };
+}
+
 /**
- * TOOL 1 — Mock crawler.
- * Đọc hai CSV local, ghép dữ liệu công ty với trang tuyển dụng và làm sạch JD.
+ * TOOL 1 — Real crawler powered by OpenAI Web Search.
+ * CSV local chỉ đóng vai trò danh sách seed để Agent biết phạm vi cần tra cứu.
  */
 export async function crawlJobData({ onStatus } = {}) {
   onStatus?.({
     tool: "crawler",
     state: "running",
-    message: "Crawler đang đọc danh sách 6 công ty...",
+    message: "Crawler đang chuẩn bị danh sách công ty và nguồn tuyển dụng...",
   });
-  await wait(420);
-
-  const companies = parseMockCsv(companiesCsv);
-  const careerPages = parseMockCsv(careerPagesCsv);
-  const companyMap = new Map(
-    companies.map((company) => [company.id, company]),
-  );
+  const seed = buildSeedData();
 
   onStatus?.({
     tool: "crawler",
     state: "running",
-    message: "Đang cập nhật dữ liệu JD từ hệ thống...",
+    message: "Crawler đang tra cứu và làm sạch JD bằng OpenAI Web Search...",
   });
-  await wait(520);
 
-  const jobs = careerPages.map((page) => {
-    const company = companyMap.get(page.company_id);
+  const result = await createStructuredResponse({
+    name: "vincareer_crawled_jobs",
+    schema: CRAWLER_SCHEMA,
+    tools: [
+      {
+        type: "web_search",
+        search_context_size: "medium",
+        user_location: {
+          type: "approximate",
+          country: "VN",
+          timezone: "Asia/Ho_Chi_Minh",
+        },
+      },
+    ],
+    instructions: `Bạn là Tool Crawler của VinCareer Insight AI.
+Tra cứu web để kiểm chứng và cập nhật thông tin tuyển thực tập/fresher cho các công ty trong dữ liệu seed.
+Chỉ trả về dữ liệu có ích cho sinh viên công nghệ. Không bịa URL tuyển dụng.
+Nếu chưa tìm thấy JD đang mở, vẫn chuẩn hóa JD seed nhưng sourceUrl phải là trang nghề nghiệp hoặc website công ty hợp lệ tìm được.
+Giữ seedId để hệ thống ghép lại slots/applicants nội bộ. Viết nội dung tiếng Việt ngắn gọn.`,
+    input: `Dữ liệu seed cần kiểm chứng và làm sạch:\n${JSON.stringify(
+      seed.jobs,
+    )}`,
+    maxOutputTokens: 6000,
+  });
+
+  const seedById = new Map(seed.jobs.map((job) => [job.seedId, job]));
+  const seedCompanyByName = new Map(
+    seed.companies.map((company) => [
+      company.name.toLowerCase(),
+      company,
+    ]),
+  );
+
+  const jobs = result.data.jobs.map((job, index) => {
+    const fallback =
+      seedById.get(job.seedId) ?? seed.jobs[index % seed.jobs.length];
+    const company =
+      seedCompanyByName.get(job.companyName.toLowerCase()) ??
+      seed.companies.find((item) => item.id === fallback?.companyId);
     return {
-      id: page.id,
-      companyId: page.company_id,
-      companyName: company?.name ?? "Công ty chưa xác định",
+      id: job.seedId || fallback?.seedId || `api-job-${index + 1}`,
+      companyId: company?.id ?? fallback?.companyId ?? "unknown",
+      companyName: job.companyName || company?.name || "Công ty chưa xác định",
       division: company?.division ?? "Technology",
       location: toList(company?.location),
       fresherFriendly: Number(company?.fresher_friendly ?? 0),
-      teamId: page.team_id,
-      teamName: page.team_name,
-      department: page.department,
-      position: page.position,
-      sourceUrl: page.url,
-      requiredSkills: toList(page.required_skills),
-      preferredSkills: toList(page.preferred_skills),
-      minimumExperience: Number(page.min_experience ?? 0),
-      targetWishes: toList(page.target_wishes),
-      workMode: page.work_mode,
-      maxSlots: Number(page.slots ?? 0),
-      currentApplicants: Number(page.applicants ?? 0),
-      cleanedDescription: `${page.position} tại ${page.team_name}. Yêu cầu chính: ${toList(
-        page.required_skills,
-      ).join(", ")}. Điểm cộng: ${toList(page.preferred_skills).join(", ")}.`,
+      teamId: fallback?.teamId ?? job.seedId,
+      teamName: job.teamName || fallback?.teamName || "Project Team",
+      department: job.department || fallback?.department || "Technology",
+      position: job.position || fallback?.position || "Technology Intern",
+      sourceUrl: job.sourceUrl || fallback?.sourceUrl || "",
+      requiredSkills: job.requiredSkills ?? fallback?.requiredSkills ?? [],
+      preferredSkills: job.preferredSkills ?? fallback?.preferredSkills ?? [],
+      minimumExperience: Number(
+        job.minimumExperience ?? fallback?.minimumExperience ?? 0,
+      ),
+      targetWishes: job.targetWishes ?? fallback?.targetWishes ?? [],
+      workMode: job.workMode || fallback?.workMode || "Hybrid",
+      maxSlots: Number(fallback?.maxSlots ?? 0),
+      currentApplicants: Number(fallback?.currentApplicants ?? 0),
+      cleanedDescription: job.cleanedDescription,
       crawledAt: new Date().toISOString(),
     };
   });
 
   const output = {
-    companies,
+    companies: seed.companies,
     jobs,
     sourcesRead: 2,
-    totalCompanies: companies.length,
+    totalCompanies: seed.companies.length,
     totalJobs: jobs.length,
-    isMock: true,
+    summary: result.data.summary,
+    apiUsage: result.usage,
+    model: result.model,
+    isMock: false,
   };
 
   onStatus?.({
     tool: "crawler",
     state: "done",
-    message: `Đã làm sạch ${jobs.length} JD từ ${companies.length} công ty.`,
+    message: `Đã cập nhật ${jobs.length} JD từ ${seed.companies.length} công ty bằng API thật.`,
   });
   return output;
 }

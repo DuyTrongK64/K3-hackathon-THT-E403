@@ -298,26 +298,6 @@ const initialMessages: ChatMessage[] = [
   },
 ];
 
-function getMockAnswer(question: string) {
-  const q = question.toLowerCase();
-  if (q.includes("vinfast") && q.includes("one mount")) {
-    return "Nếu bạn thích hệ thống quy mô lớn, C++ và domain ô tô điện, VinFast là lựa chọn giàu thử thách. Nếu thiên về web/product, React và muốn ship tính năng nhanh, One Mount phù hợp hơn. Với fresher Frontend, mình nghiêng 60% về One Mount; với Embedded/Backend, VinFast nổi bật hơn.";
-  }
-  if (q.includes("vinai")) {
-    return "Để nộp VinAI sau kỳ thực tập, hãy ưu tiên 4 mảng: Python chắc, nền tảng ML/DL, khả năng đọc paper tiếng Anh và một project có số liệu đánh giá rõ. Điểm cộng lớn là GitHub sạch, biết PyTorch và có thể giải thích vì sao bạn chọn kiến trúc mô hình.";
-  }
-  if (q.includes("fresher") || q.includes("thân thiện")) {
-    return "Theo dữ liệu mô phỏng, One Mount đang thân thiện nhất với fresher (5/5), sau đó là VinFast và VinBigData (4.5/5). Tuy nhiên, lựa chọn tốt nhất còn phụ thuộc tech stack: Frontend → One Mount, Data → VinBigData, C++/Automotive → VinFast.";
-  }
-  if (q.includes("phỏng vấn") || q.includes("interview")) {
-    return "Phần lớn quy trình gồm 3 vòng: screening CV, technical 60–90 phút và culture/team fit. Bạn nên chuẩn bị một câu chuyện dự án theo STAR, ôn DSA ở mức cơ bản–trung bình và luyện giải thích trade-off thay vì chỉ đưa ra đáp án.";
-  }
-  if (q.includes("lương") || q.includes("trợ cấp")) {
-    return "Prototype này không dùng dữ liệu lương thật. Mức mock tham khảo cho intern/fresher nằm trong khoảng 5–15 triệu/tháng tùy vị trí và năng lực. Khi trao đổi thật, hãy hỏi rõ gross/net, phụ cấp, bảo hiểm và chu kỳ review.";
-  }
-  return "Dựa trên dữ liệu mô phỏng, mình khuyên bạn chọn 2 công ty phù hợp tech stack nhất, đối chiếu yêu cầu fresher rồi chuẩn bị một project có thể demo trong 5 phút. Bạn có thể mở mục “So sánh Tech Stack” để mình giúp thu hẹp lựa chọn.";
-}
-
 function LogoMark({ compact = false }: { compact?: boolean }) {
   return (
     <div className="brand-lockup" aria-label="VinCareer AI">
@@ -377,6 +357,7 @@ export default function Home() {
   const [experience, setExperience] = useState(1);
   const [toast, setToast] = useState("");
   const [uploadedCv, setUploadedCv] = useState<UploadedCv | null>(null);
+  const [uploadedCvFile, setUploadedCvFile] = useState<File | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const cvInputRef = useRef<HTMLInputElement | null>(null);
   const messageIdRef = useRef(2);
@@ -465,26 +446,19 @@ export default function Home() {
       setToast("CV cần có định dạng PDF, DOC hoặc DOCX.");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      setToast("CV cần nhỏ hơn 10 MB.");
+    if (file.size > 8 * 1024 * 1024) {
+      setToast("CV cần nhỏ hơn 8 MB.");
       return;
     }
 
+    setUploadedCvFile(file);
     setUploadedCv({
       name: file.name,
       size: `${Math.max(1, Math.round(file.size / 1024))} KB`,
-      status: "analyzing",
+      status: "ready",
     });
-    window.setTimeout(() => {
-      setUploadedCv({
-        name: file.name,
-        size: `${Math.max(1, Math.round(file.size / 1024))} KB`,
-        status: "ready",
-      });
-      setSelectedSkills(["React", "JavaScript", "Git", "English"]);
-      setExperience(1);
-      setToast("Phân tích CV hoàn tất — đã nhận diện 4 kỹ năng nổi bật.");
-    }, 900);
+    resetAgent();
+    setToast("CV đã sẵn sàng. Agent sẽ đọc file khi bạn gửi câu hỏi.");
   };
 
   const sendChat = async (question?: string) => {
@@ -508,16 +482,14 @@ export default function Home() {
       const agentResult = await runAgent(value, {
         cvInput: hasCvContext
           ? {
-              text:
-                "Frontend Intern 4 tháng. Kỹ năng React TypeScript JavaScript Git Python SQL. Mong muốn frontend product hybrid và có mentor.",
+              file: uploadedCvFile,
             }
           : {},
       });
       const topMatch = agentResult?.matches?.[0];
       const responseContent =
-        agentResult?.intent === "career_question"
-          ? getMockAnswer(value)
-          : agentResult?.answer ?? getMockAnswer(value);
+        agentResult?.answer ??
+        "Agent chưa trả về nội dung. Vui lòng kiểm tra API key và thử lại.";
       messageIdRef.current += 1;
       setChatMessages((current) => [
         ...current,

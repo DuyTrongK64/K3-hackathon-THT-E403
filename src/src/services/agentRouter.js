@@ -1,37 +1,47 @@
 import { crawlJobData } from "./crawlerTool";
 import { scanCvInput } from "./cvScannerTool";
 import { calculateTopMatches } from "./matchingTool";
+import { createStructuredResponse } from "./openaiClient";
 
-const normalize = (value) =>
-  String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+const ROUTER_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["intent", "needsCv", "needsJd", "rationale"],
+  properties: {
+    intent: {
+      type: "string",
+      enum: ["refresh_jobs", "scan_cv", "match_cv", "career_question"],
+    },
+    needsCv: { type: "boolean" },
+    needsJd: { type: "boolean" },
+    rationale: { type: "string" },
+  },
+};
 
-export function detectAgentIntent(message) {
-  const normalizedMessage = normalize(message);
-  if (
-    ["cap nhat", "crawl", "cao du lieu", "du lieu moi", "jd moi"].some(
-      (keyword) => normalizedMessage.includes(keyword),
-    )
-  ) {
-    return "refresh_jobs";
-  }
-  if (
-    ["quét cv", "quet cv", "scan cv", "doc cv", "phan tich cv"].some(
-      (keyword) => normalizedMessage.includes(keyword),
-    )
-  ) {
-    return "scan_cv";
-  }
-  if (
-    ["hop voi cv", "phu hop", "top 3", "cong ty nao", "matching"].some(
-      (keyword) => normalizedMessage.includes(keyword),
-    )
-  ) {
-    return "match_cv";
-  }
-  return "career_question";
+const ANSWER_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["answer"],
+  properties: {
+    answer: { type: "string" },
+  },
+};
+
+export async function detectAgentIntent(message) {
+  const result = await createStructuredResponse({
+    name: "vincareer_agent_route",
+    schema: ROUTER_SCHEMA,
+    instructions: `Bạn là router của VinCareer Insight AI.
+Chọn đúng một intent:
+- refresh_jobs: cập nhật/crawl/tra cứu dữ liệu tuyển dụng mới.
+- scan_cv: chỉ đọc, phân tích hoặc tóm tắt CV.
+- match_cv: tìm công ty, team, JD hoặc Top 3 phù hợp với CV.
+- career_question: hỏi đáp nghề nghiệp, công ty, kỹ năng, phỏng vấn.
+Không trả lời câu hỏi ở bước này.`,
+    input: message,
+    maxOutputTokens: 500,
+  });
+  return result.data;
 }
 
 /**
@@ -46,7 +56,7 @@ export async function routeAgentRequest(
   } = {},
   { onStatus } = {},
 ) {
-  const intent = detectAgentIntent(message);
+  if (!String(message).trim()) throw new Error("AGENT_MESSAGE_REQUIRED");
   const toolTrace = [];
 
   const emit = (step) => {
@@ -61,7 +71,15 @@ export async function routeAgentRequest(
   emit({
     tool: "agent",
     state: "running",
-    message: "Agent đang phân tích yêu cầu của bạn...",
+    message: "Agent đang phân tích ý định bằng OpenAI...",
+  });
+
+  const route = await detectAgentIntent(message);
+  const intent = route.intent;
+  emit({
+    tool: "agent",
+    state: "done",
+    message: `Agent đã chọn luồng ${intent}: ${route.rationale}`,
   });
 
   let jdData = existingJdData;
@@ -72,7 +90,7 @@ export async function routeAgentRequest(
     jdData = await crawlJobData({ onStatus: emit });
     return {
       intent,
-      answer: `Đã cập nhật ${jdData.totalJobs} JD mock từ ${jdData.totalCompanies} công ty. Dữ liệu đã được làm sạch và sẵn sàng để matching.`,
+      answer: `Đã cập nhật ${jdData.totalJobs} JD từ ${jdData.totalCompanies} công ty bằng OpenAI Web Search. Dữ liệu đã được làm sạch và sẵn sàng để matching.`,
       toolTrace,
       jdData,
       cvData,
@@ -108,7 +126,7 @@ export async function routeAgentRequest(
       intent,
       answer: bestMatch
         ? `Agent đề xuất ${bestMatch.companyName} — ${bestMatch.teamName} cho vị trí ${bestMatch.position} với ${bestMatch.score}% phù hợp.`
-        : "Chưa tìm thấy kết quả phù hợp trong dữ liệu mock.",
+        : "Chưa tìm thấy kết quả phù hợp trong dữ liệu JD hiện tại.",
       toolTrace,
       jdData,
       cvData,
@@ -120,20 +138,32 @@ export async function routeAgentRequest(
   if (!jdData) {
     jdData = await crawlJobData({ onStatus: emit });
   }
-  const keyword = normalize(message);
-  const relatedJobs = jdData.jobs
-    .filter((job) =>
-      normalize(
-        `${job.companyName} ${job.teamName} ${job.position} ${job.requiredSkills.join(" ")}`,
-      ).includes(keyword),
-    )
-    .slice(0, 3);
+  emit({
+    tool: "agent",
+    state: "running",
+    message: "Agent đang tổng hợp câu trả lời từ dữ liệu JD...",
+  });
+  const answerResult = await createStructuredResponse({
+    name: "vincareer_agent_answer",
+    schema: ANSWER_SCHEMA,
+    instructions: `Bạn là cố vấn nghề nghiệp VinCareer Insight AI dành cho sinh viên.
+Trả lời bằng tiếng Việt, trực tiếp, thực tế và không quá 180 từ.
+Chỉ dựa trên JD được cung cấp; nếu dữ liệu chưa đủ phải nói rõ.
+Không khẳng định lương, tỷ lệ offer hoặc chính sách nội bộ là dữ liệu chính thức.`,
+    input: `Câu hỏi: ${message}\n\nDữ liệu JD:\n${JSON.stringify(
+      jdData.jobs.slice(0, 12),
+    )}`,
+    maxOutputTokens: 1000,
+  });
+  emit({
+    tool: "agent",
+    state: "done",
+    message: "Agent đã hoàn tất câu trả lời.",
+  });
 
   return {
     intent,
-    answer: relatedJobs.length
-      ? `Mình tìm thấy ${relatedJobs.length} vị trí liên quan trong dữ liệu JD mock: ${relatedJobs.map((job) => `${job.position} tại ${job.companyName}`).join("; ")}.`
-      : "Mình có thể cập nhật JD, quét CV hoặc tìm Top 3 công ty phù hợp. Hãy thử: “Tìm công ty hợp với CV của tôi”.",
+    answer: answerResult.data.answer,
     toolTrace,
     jdData,
     cvData,

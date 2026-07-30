@@ -519,7 +519,7 @@ export default function CareerJourneyFeatures() {
       showToast("Phân tích hoàn tất — đã tìm thấy Top 3 kết quả phù hợp.");
       return;
     }
-    showToast(result?.answer ?? "Không thể phân tích CV mock. Hãy thử lại.");
+    showToast(result?.answer ?? "Không thể phân tích CV qua API. Hãy thử lại.");
   };
 
   const openCompetitionForTeam = (teamId: string) => {
@@ -806,7 +806,7 @@ export default function CareerJourneyFeatures() {
                     </div>
                   </div>
                   <span className="mock-badge">
-                    <ShieldCheck size={13} /> Mock Analysis
+                    <ShieldCheck size={13} /> OpenAI Analysis
                   </span>
                 </div>
 
@@ -856,7 +856,7 @@ export default function CareerJourneyFeatures() {
                       <>
                         <UploadCloud size={30} />
                         <strong>Kéo thả hoặc chọn CV từ thiết bị</strong>
-                        <span>Hỗ trợ PDF, DOC, DOCX · Tối đa 10 MB</span>
+                        <span>Hỗ trợ PDF, DOC, DOCX · Tối đa 8 MB</span>
                       </>
                     )}
                   </label>
@@ -894,13 +894,13 @@ export default function CareerJourneyFeatures() {
 
                 <div className="cv-analyzer-notes">
                   <span>
-                    <Check size={13} /> Không lưu file thật
+                    <Check size={13} /> Không lưu CV trong ứng dụng
                   </span>
                   <span>
-                    <Clock3 size={13} /> Kết quả sau khoảng 2 giây
+                    <Clock3 size={13} /> Thời gian tùy độ dài CV
                   </span>
                   <span>
-                    <Bot size={13} /> 100% dữ liệu mock
+                    <Bot size={13} /> Phân tích bằng OpenAI API
                   </span>
                 </div>
               </div>
@@ -922,7 +922,7 @@ export default function CareerJourneyFeatures() {
                       <h3>Đang đọc hồ sơ và đối chiếu cơ hội...</h3>
                       <p>
                         {agentSteps.at(-1)?.message ??
-                          "AI mock đang nhận diện kỹ năng, kinh nghiệm và domain."}
+                          "OpenAI đang nhận diện kỹ năng, kinh nghiệm và domain."}
                       </p>
                       <div className="agent-tool-trace">
                         {agentSteps.slice(-3).map((step) => (

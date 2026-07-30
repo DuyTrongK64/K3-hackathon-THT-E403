@@ -1,26 +1,63 @@
-const wait = (milliseconds) =>
-  new Promise((resolve) => window.setTimeout(resolve, milliseconds));
-
-const normalize = (value) =>
-  String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-
-const intersectionRatio = (candidateValues = [], targetValues = []) => {
-  if (!targetValues.length) return 1;
-  const candidateSet = new Set(candidateValues.map(normalize));
-  const matches = targetValues.filter((value) =>
-    candidateSet.has(normalize(value)),
-  ).length;
-  return matches / targetValues.length;
-};
+import { createStructuredResponse } from "./openaiClient";
 
 const clamp = (value, minimum, maximum) =>
   Math.min(maximum, Math.max(minimum, value));
 
+const MATCH_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["matches", "evaluationSummary"],
+  properties: {
+    evaluationSummary: { type: "string" },
+    matches: {
+      type: "array",
+      minItems: 1,
+      maxItems: 3,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "jobId",
+          "score",
+          "internWishes",
+          "employerRequirements",
+          "preferredSkills",
+          "experience",
+          "fresherEnvironment",
+          "reasons",
+          "matchedSkills",
+          "missingSkills",
+        ],
+        properties: {
+          jobId: { type: "string" },
+          score: { type: "number" },
+          internWishes: { type: "number" },
+          employerRequirements: { type: "number" },
+          preferredSkills: { type: "number" },
+          experience: { type: "number" },
+          fresherEnvironment: { type: "number" },
+          reasons: {
+            type: "array",
+            minItems: 1,
+            maxItems: 3,
+            items: { type: "string" },
+          },
+          matchedSkills: {
+            type: "array",
+            items: { type: "string" },
+          },
+          missingSkills: {
+            type: "array",
+            items: { type: "string" },
+          },
+        },
+      },
+    },
+  },
+};
+
 /**
- * TOOL 3 — Matching Engine.
+ * TOOL 3 — Matching Engine powered by OpenAI.
  * Trọng số cao nhất thuộc về mong muốn thực tập sinh (42%)
  * và kỹ năng/yêu cầu bắt buộc của nhà tuyển dụng (38%).
  */
@@ -36,85 +73,75 @@ export async function calculateTopMatches(
     state: "running",
     message: "Matching Engine đang so sánh CV với yêu cầu tuyển dụng...",
   });
-  await wait(580);
 
-  const candidateWishes = [
-    ...(cvData.wishes?.targetDomains ?? []),
-    ...(cvData.wishes?.workModes ?? []),
-  ];
-
-  const ranked = jdData.jobs.map((job) => {
-    const requiredRatio = intersectionRatio(
-      cvData.skills,
-      job.requiredSkills,
-    );
-    const preferredRatio = intersectionRatio(
-      cvData.skills,
-      job.preferredSkills,
-    );
-    const wishRatio = intersectionRatio(candidateWishes, [
-      ...job.targetWishes,
-      job.workMode,
-    ]);
-    const experienceRatio =
-      cvData.experienceYears >= job.minimumExperience
-        ? 1
-        : clamp(
-            cvData.experienceYears / Math.max(job.minimumExperience, 1),
-            0,
-            1,
-          );
-    const fresherBonus = clamp(job.fresherFriendly / 5, 0, 1);
-
-    const scoreDetail = {
-      internWishes: Math.round(wishRatio * 42),
-      employerRequirements: Math.round(requiredRatio * 38),
-      preferredSkills: Math.round(preferredRatio * 10),
-      experience: Math.round(experienceRatio * 7),
-      fresherEnvironment: Math.round(fresherBonus * 3),
-    };
-    const rawScore = Object.values(scoreDetail).reduce(
-      (sum, score) => sum + score,
-      0,
-    );
-    const score = clamp(rawScore, 48, 97);
-    const matchedSkills = job.requiredSkills.filter((skill) =>
-      cvData.skills.map(normalize).includes(normalize(skill)),
-    );
-    const missingSkills = job.requiredSkills.filter(
-      (skill) => !cvData.skills.map(normalize).includes(normalize(skill)),
-    );
-
-    const reasons = [
-      matchedSkills.length
-        ? `Khớp kỹ năng ${matchedSkills.slice(0, 3).join(", ")} với yêu cầu của ${job.teamName}.`
-        : `Có nền tảng chuyển đổi phù hợp với vị trí ${job.position}.`,
-      wishRatio >= 0.3
-        ? "Môi trường và domain phù hợp mong muốn thực tập sinh."
-        : `Nên tìm hiểu thêm domain ${job.targetWishes.slice(0, 2).join(", ")}.`,
-    ];
-
-    return {
-      id: job.id,
-      companyId: job.companyId,
-      companyName: job.companyName,
-      teamId: job.teamId,
-      teamName: job.teamName,
-      department: job.department,
-      position: job.position,
-      score,
-      scoreDetail,
-      reasons,
-      matchedSkills,
-      missingSkills,
-      sourceJob: job,
-    };
+  const result = await createStructuredResponse({
+    name: "vincareer_top_matches",
+    schema: MATCH_SCHEMA,
+    instructions: `Bạn là Matching Engine cho chương trình thực tập 6 tuần.
+Chọn tối đa Top ${limit} JD phù hợp nhất. Chấm đúng thang 100 theo trọng số:
+- Mong muốn thực tập sinh: tối đa 42 điểm.
+- Yêu cầu bắt buộc nhà tuyển dụng: tối đa 38 điểm.
+- Kỹ năng ưu tiên: tối đa 10 điểm.
+- Kinh nghiệm: tối đa 7 điểm.
+- Mức thân thiện fresher: tối đa 3 điểm.
+score phải bằng tổng 5 điểm thành phần và nằm trong 0-100.
+Không cộng điểm cho kỹ năng không xuất hiện trong CV. Lý do phải cụ thể, bằng tiếng Việt.`,
+    input: `CV đã quét:\n${JSON.stringify(
+      cvData,
+    )}\n\nDanh sách JD đã cập nhật:\n${JSON.stringify(jdData.jobs)}`,
+    maxOutputTokens: 3500,
   });
 
-  const topMatches = ranked
+  const jobById = new Map(jdData.jobs.map((job) => [job.id, job]));
+  const topMatches = result.data.matches
+    .map((match) => {
+      const job = jobById.get(match.jobId);
+      if (!job) return null;
+      const scoreDetail = {
+        internWishes: clamp(Math.round(match.internWishes), 0, 42),
+        employerRequirements: clamp(
+          Math.round(match.employerRequirements),
+          0,
+          38,
+        ),
+        preferredSkills: clamp(Math.round(match.preferredSkills), 0, 10),
+        experience: clamp(Math.round(match.experience), 0, 7),
+        fresherEnvironment: clamp(
+          Math.round(match.fresherEnvironment),
+          0,
+          3,
+        ),
+      };
+      const score = clamp(
+        Object.values(scoreDetail).reduce((sum, value) => sum + value, 0),
+        0,
+        100,
+      );
+
+      return {
+        id: job.id,
+        companyId: job.companyId,
+        companyName: job.companyName,
+        teamId: job.teamId,
+        teamName: job.teamName,
+        department: job.department,
+        position: job.position,
+        score,
+        scoreDetail,
+        reasons: match.reasons,
+        matchedSkills: match.matchedSkills,
+        missingSkills: match.missingSkills,
+        sourceJob: job,
+      };
+    })
+    .filter(Boolean)
     .sort((first, second) => second.score - first.score)
     .slice(0, limit)
     .map((match, index) => ({ ...match, rank: index + 1 }));
+
+  if (!topMatches.length) {
+    throw new Error("OPENAI_MATCHES_EMPTY");
+  }
 
   onStatus?.({
     tool: "matching",
@@ -132,6 +159,9 @@ export async function calculateTopMatches(
       experience: 0.07,
       fresherEnvironment: 0.03,
     },
-    isMock: true,
+    evaluationSummary: result.data.evaluationSummary,
+    apiUsage: result.usage,
+    model: result.model,
+    isMock: false,
   };
 }

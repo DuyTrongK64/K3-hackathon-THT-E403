@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { routeAgentRequest } from "../services/agentRouter";
+import { requestCareerAgent } from "../services/careerAgentApi";
 
 export function useCareerAgent() {
   const [isRunning, setIsRunning] = useState(false);
@@ -27,7 +27,7 @@ export function useCareerAgent() {
       if (resetSteps) setAgentSteps([]);
 
       try {
-        const result = await routeAgentRequest(
+        const result = await requestCareerAgent(
           {
             message,
             cvInput,
@@ -50,10 +50,18 @@ export function useCareerAgent() {
             "Hãy tải CV hoặc dán nội dung CV trước khi yêu cầu Agent matching.",
           JD_DATA_REQUIRED: "Chưa có dữ liệu JD để thực hiện matching.",
           CV_DATA_REQUIRED: "CV chưa có dữ liệu kỹ năng hợp lệ.",
+          OPENAI_API_KEY_MISSING:
+            "Server chưa có OPENAI_API_KEY. Hãy thêm key vào .env.local rồi khởi động lại.",
+          CV_FILE_TOO_LARGE: "CV vượt quá giới hạn 8 MB.",
+          CV_FILE_READ_FAILED: "Không thể đọc file CV đã chọn.",
+          AGENT_API_ERROR:
+            caughtError?.detail ??
+            "Không thể kết nối Agent API. Vui lòng thử lại.",
         };
         const errorMessage =
           messageByCode[caughtError?.message] ??
-          "Agent gặp lỗi mock ngoài dự kiến. Vui lòng thử lại.";
+          caughtError?.detail ??
+          "Agent API gặp lỗi ngoài dự kiến. Vui lòng thử lại.";
         setError(errorMessage);
         return {
           intent: "error",
