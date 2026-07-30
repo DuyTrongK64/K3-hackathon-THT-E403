@@ -70,6 +70,14 @@ button {
   cursor: pointer;
 }
 
+.sr-only-file {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .app button:focus-visible,
 .app input:focus-visible,
 .app select:focus-visible {
@@ -426,16 +434,136 @@ button {
   line-height: 1.75;
 }
 
-.hero-chat {
+.cv-flow-card {
   width: min(100%, 575px);
-  min-height: 58px;
+  padding: 8px;
+  border: 1px solid rgba(0, 84, 166, .2);
+  border-radius: 16px;
   background: var(--app-surface);
-  border: 1px solid rgba(0, 84, 166, .25);
-  border-radius: 14px;
+  box-shadow: 0 15px 40px rgba(20, 74, 130, .12);
+}
+
+.cv-flow-card__top {
+  min-height: 55px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 6px 9px;
+  border-bottom: 1px solid var(--app-line);
+  margin-bottom: 7px;
+}
+
+.cv-upload-button {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: var(--blue-bright);
+}
+
+.cv-upload-button > svg,
+.cv-spinner {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  padding: 8px;
+  border-radius: 9px;
+  background: rgba(8, 120, 230, .09);
+}
+
+.cv-upload-button--ready {
+  color: #19a769;
+}
+
+.cv-upload-button--ready > svg {
+  background: rgba(25, 167, 105, .1);
+}
+
+.cv-upload-button > span:nth-child(2) {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cv-upload-button strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--app-ink);
+  font-size: 10.5px;
+}
+
+.cv-upload-button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 3px;
+  color: var(--app-muted);
+  font-size: 7.5px;
+}
+
+.cv-spinner {
+  padding: 0;
+  border: 3px solid rgba(8, 120, 230, .14);
+  border-top-color: var(--blue-bright);
+  animation: cvSpin .8s linear infinite;
+}
+
+@keyframes cvSpin {
+  to { transform: rotate(360deg); }
+}
+
+.flow-steps {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.flow-steps span {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--app-muted);
+  background: var(--app-surface-soft);
+  border: 1px solid var(--app-line);
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.flow-steps span.is-active {
+  color: white;
+  border-color: var(--blue-bright);
+  background: var(--blue-bright);
+}
+
+.flow-steps span.is-done {
+  color: white;
+  border-color: #19a769;
+  background: #19a769;
+}
+
+.flow-steps i {
+  width: 10px;
+  height: 1px;
+  background: var(--app-line);
+}
+
+.hero-chat {
+  width: 100%;
+  min-height: 58px;
+  background: var(--app-surface-soft);
+  border: 1px solid var(--app-line);
+  border-radius: 11px;
   display: flex;
   align-items: center;
   padding: 7px;
-  box-shadow: 0 15px 40px rgba(20, 74, 130, .12);
+  box-shadow: none;
 }
 
 .hero-chat__icon {
@@ -445,7 +573,7 @@ button {
   display: grid;
   place-items: center;
   color: var(--blue-bright);
-  background: rgba(8, 120, 230, .09);
+  background: var(--app-surface);
   flex: 0 0 auto;
 }
 
@@ -1485,6 +1613,50 @@ button {
   background: var(--app-surface-soft);
 }
 
+.chat-sidebar > .chat-cv-card {
+  min-height: 66px;
+  margin-bottom: 18px;
+  padding: 10px;
+  grid-template-columns: auto 1fr auto;
+  border-color: rgba(8, 120, 230, .22);
+  background: rgba(8, 120, 230, .07);
+  color: var(--blue-bright);
+}
+
+.chat-sidebar > .chat-cv-card:hover {
+  transform: none;
+}
+
+.chat-cv-card > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-cv-card strong,
+.chat-cv-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-cv-card strong {
+  color: var(--app-ink);
+  font-size: 9px;
+}
+
+.chat-cv-card small {
+  margin-top: 3px;
+  color: var(--app-muted);
+  font-size: 7.5px;
+}
+
+.chat-sidebar > .chat-cv-card--ready {
+  color: #1ba66b;
+  border-color: rgba(27, 166, 107, .24);
+  background: rgba(27, 166, 107, .07);
+}
+
 .chat-sidebar__title {
   display: flex;
   align-items: center;
@@ -1621,6 +1793,23 @@ button {
   font-size: 8.5px;
 }
 
+.chat-cv-context {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  color: #14945e;
+  background: rgba(27, 166, 107, .08);
+  font-size: 7.5px;
+  font-weight: 700;
+}
+
+.chat-cv-context + button {
+  margin-left: 0;
+}
+
 .chat-messages {
   overflow-y: auto;
   padding: 24px;
@@ -1679,6 +1868,115 @@ button {
   border-radius: 13px 4px 13px 13px;
 }
 
+.cv-result-card {
+  width: min(480px, 100%);
+  margin-top: 9px;
+  padding: 14px;
+  border: 1px solid rgba(8, 120, 230, .2);
+  border-radius: 13px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(6, 182, 212, .09), transparent 38%),
+    var(--app-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.cv-result-card__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.cv-result-card__head > span {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.cv-result-card__head > div {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.cv-result-card__head small {
+  color: var(--blue-bright);
+  font-size: 6.5px;
+  font-weight: 800;
+  letter-spacing: .8px;
+}
+
+.cv-result-card__head strong {
+  margin-top: 2px;
+  color: var(--app-ink);
+  font-size: 10px;
+}
+
+.cv-result-card__head em {
+  padding: 5px 7px;
+  border-radius: 6px;
+  color: #14945e;
+  background: rgba(27, 166, 107, .09);
+  font-size: 7.5px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.cv-result-card__skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 12px 0 9px;
+}
+
+.cv-result-card__skills span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  color: #14945e;
+  background: rgba(27, 166, 107, .08);
+  font-size: 7.5px;
+  font-weight: 700;
+}
+
+.cv-result-card__skills span.is-gap {
+  color: #d86b29;
+  background: rgba(238, 117, 49, .09);
+}
+
+.cv-result-card > p {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--app-muted);
+  background: transparent;
+  font-size: 8.5px;
+  line-height: 1.55;
+}
+
+.cv-result-card > button {
+  width: 100%;
+  height: 35px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: white;
+  background: linear-gradient(135deg, var(--blue), var(--blue-bright));
+  font-size: 8.5px;
+  font-weight: 700;
+}
+
 .typing-dots {
   width: 62px;
   height: 37px;
@@ -1714,18 +2012,34 @@ button {
 .chat-composer {
   min-height: 91px;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   padding: 13px 17px 10px;
   border-top: 1px solid var(--app-line);
   position: relative;
 }
 
-.chat-composer input {
+.composer-upload {
+  width: 45px;
   height: 45px;
   border: 1px solid var(--app-line);
   border-right: 0;
   border-radius: 10px 0 0 10px;
+  display: grid;
+  place-items: center;
+  color: var(--app-muted);
+  background: var(--app-surface-soft);
+}
+
+.composer-upload--ready {
+  color: #1ba66b;
+}
+
+.chat-composer input {
+  height: 45px;
+  border: 1px solid var(--app-line);
+  border-right: 0;
+  border-radius: 0;
   outline: 0;
   padding: 0 14px;
   color: var(--app-ink);
@@ -1742,6 +2056,18 @@ button {
   place-items: center;
   color: white;
   background: var(--blue-bright);
+}
+
+.chat-composer > .composer-upload {
+  border: 1px solid var(--app-line);
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
+  background: var(--app-surface-soft);
+  color: var(--app-muted);
+}
+
+.chat-composer > .composer-upload--ready {
+  color: #1ba66b;
 }
 
 .chat-composer > button:disabled {
@@ -2522,6 +2848,7 @@ button {
   }
 
   .live-pill,
+  .cv-flow-card,
   .hero-chat,
   .hero__proof {
     margin-inline: auto;
@@ -2631,6 +2958,18 @@ button {
 
   .hero-chat {
     padding: 6px;
+  }
+
+  .cv-flow-card__top {
+    gap: 7px;
+  }
+
+  .flow-steps {
+    display: none;
+  }
+
+  .cv-upload-button strong {
+    max-width: 230px;
   }
 
   .hero-chat__icon {
@@ -2783,6 +3122,14 @@ button {
     width: 34px;
     height: 34px;
     padding: 0;
+  }
+
+  .chat-cv-context {
+    margin-left: auto;
+  }
+
+  .chat-cv-context span {
+    display: none;
   }
 
   .chat-window__top > button::after {

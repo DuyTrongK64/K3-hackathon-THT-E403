@@ -13,6 +13,7 @@ import {
   Code2,
   Command,
   ExternalLink,
+  FileText,
   Gauge,
   GraduationCap,
   HeartHandshake,
@@ -28,6 +29,7 @@ import {
   Sun,
   Target,
   TrendingUp,
+  UploadCloud,
   Users,
   X,
   XCircle,
@@ -66,6 +68,14 @@ type ChatMessage = {
   id: number;
   role: "user" | "assistant";
   content: string;
+  resultCompanyId?: string;
+  fitScore?: number;
+};
+
+type UploadedCv = {
+  name: string;
+  size: string;
+  status: "analyzing" | "ready";
 };
 
 const companies: Company[] = [
@@ -262,7 +272,7 @@ const initialMessages: ChatMessage[] = [
     id: 1,
     role: "assistant",
     content:
-      "Chào bạn! Mình là VinCareer AI. Mình có thể giúp bạn so sánh công ty, bóc tách JD và chuẩn bị phỏng vấn. Bạn đang quan tâm vị trí nào?",
+      "Chào bạn! Mình là VinCareer AI. Hãy tải CV lên để nhận phân tích cá nhân hóa, hoặc hỏi mình về công ty, JD và phỏng vấn.",
   },
 ];
 
@@ -344,7 +354,9 @@ export default function Home() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>(["React", "JavaScript", "Git"]);
   const [experience, setExperience] = useState(1);
   const [toast, setToast] = useState("");
+  const [uploadedCv, setUploadedCv] = useState<UploadedCv | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const cvInputRef = useRef<HTMLInputElement | null>(null);
   const messageIdRef = useRef(2);
 
   const compareCompanyA = companies.find((company) => company.id === compareA) ?? companies[0];
@@ -406,6 +418,47 @@ export default function Home() {
     window.setTimeout(() => setSelectedCompany(null), 220);
   };
 
+  const handleCvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (!extension || !["pdf", "doc", "docx"].includes(extension)) {
+      setToast("CV cần có định dạng PDF, DOC hoặc DOCX.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setToast("CV cần nhỏ hơn 10 MB.");
+      return;
+    }
+
+    setUploadedCv({
+      name: file.name,
+      size: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+      status: "analyzing",
+    });
+    window.setTimeout(() => {
+      setUploadedCv({
+        name: file.name,
+        size: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+        status: "ready",
+      });
+      setSelectedSkills(["React", "JavaScript", "Git", "English"]);
+      setExperience(1);
+      setToast("Phân tích CV hoàn tất — đã nhận diện 4 kỹ năng nổi bật.");
+    }, 900);
+  };
+
+  const getRecommendedCompanyId = (question: string) => {
+    const normalized = question.toLowerCase();
+    if (normalized.includes("vinai") || normalized.includes("ai")) return "vinai";
+    if (normalized.includes("vinfast") || normalized.includes("c++")) return "vinfast";
+    if (normalized.includes("bigdata") || normalized.includes("data")) return "vinbigdata";
+    if (normalized.includes("vinbrain") || normalized.includes("health")) return "vinbrain";
+    return "onemount";
+  };
+
   const sendChat = (question?: string) => {
     const value = (question ?? chatInput).trim();
     if (!value || isTyping) {
@@ -422,13 +475,20 @@ export default function Home() {
     setChatInput("");
     setIsTyping(true);
     window.setTimeout(() => {
+      const hasCvContext = uploadedCv?.status === "ready";
+      const resultCompanyId = hasCvContext ? getRecommendedCompanyId(value) : undefined;
+      const personalizedAnswer = hasCvContext
+        ? `Mình đã đối chiếu CV “${uploadedCv.name}” với yêu cầu tuyển dụng mock. ${getMockAnswer(value)}`
+        : getMockAnswer(value);
       messageIdRef.current += 1;
       setChatMessages((current) => [
         ...current,
         {
           id: messageIdRef.current,
           role: "assistant",
-          content: getMockAnswer(value),
+          content: personalizedAnswer,
+          resultCompanyId,
+          fitScore: resultCompanyId === "vinai" ? 78 : resultCompanyId === "vinfast" ? 81 : 86,
         },
       ]);
       setIsTyping(false);
@@ -438,6 +498,10 @@ export default function Home() {
   const submitHeroQuestion = (event: FormEvent) => {
     event.preventDefault();
     const value = heroQuestion.trim();
+    if (uploadedCv?.status === "analyzing") {
+      setToast("AI đang đọc CV, vui lòng chờ thêm một chút.");
+      return;
+    }
     if (!value) {
       setToast("Chọn một gợi ý hoặc nhập câu hỏi của bạn.");
       return;
@@ -473,6 +537,15 @@ export default function Home() {
     <main className={isDark ? "app app--dark" : "app"}>
       <div className="ambient ambient--one" />
       <div className="ambient ambient--two" />
+      <input
+        ref={cvInputRef}
+        data-testid="cv-file-input"
+        className="sr-only-file"
+        type="file"
+        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        onChange={handleCvUpload}
+        aria-label="Chọn tệp CV"
+      />
 
       {/* Header / global navigation */}
       <header className="topbar">
@@ -621,20 +694,64 @@ export default function Home() {
                   <br className="desktop-break" /> làm chủ mọi vòng phỏng vấn.
                 </p>
 
-                <form className="hero-chat" onSubmit={submitHeroQuestion}>
-                  <div className="hero-chat__icon">
-                    <Bot size={21} />
+                <div className="cv-flow-card">
+                  <div className="cv-flow-card__top">
+                    <button
+                      className={uploadedCv ? "cv-upload-button cv-upload-button--ready" : "cv-upload-button"}
+                      type="button"
+                      onClick={() => cvInputRef.current?.click()}
+                      data-testid="upload-cv-button"
+                    >
+                      {uploadedCv?.status === "analyzing" ? (
+                        <span className="cv-spinner" />
+                      ) : uploadedCv ? (
+                        <CheckCircle2 size={18} />
+                      ) : (
+                        <UploadCloud size={18} />
+                      )}
+                      <span>
+                        <strong>
+                          {uploadedCv?.status === "analyzing"
+                            ? "Đang phân tích CV..."
+                            : uploadedCv
+                              ? uploadedCv.name
+                              : "Tải CV để AI hiểu bạn"}
+                        </strong>
+                        <small>
+                          {uploadedCv
+                            ? `${uploadedCv.size} · ${uploadedCv.status === "ready" ? "Đã nhận diện React, JavaScript, Git, English" : "Khoảng 1 giây"}`
+                            : "PDF, DOC, DOCX · Tối đa 10 MB"}
+                        </small>
+                      </span>
+                    </button>
+                    <div className="flow-steps" aria-label="Quy trình phân tích CV">
+                      <span className={uploadedCv ? "is-done" : "is-active"}>1</span>
+                      <i />
+                      <span className={uploadedCv?.status === "ready" ? "is-active" : ""}>2</span>
+                      <i />
+                      <span>3</span>
+                    </div>
                   </div>
-                  <input
-                    aria-label="Hỏi VinCareer AI"
-                    placeholder="Hỏi AI: “Vị trí nào phù hợp với kỹ năng React của mình?”"
-                    value={heroQuestion}
-                    onChange={(event) => setHeroQuestion(event.target.value)}
-                  />
-                  <button type="submit" aria-label="Gửi câu hỏi">
-                    Hỏi AI <ArrowRight size={17} />
-                  </button>
-                </form>
+                  <form className="hero-chat" onSubmit={submitHeroQuestion}>
+                    <div className="hero-chat__icon">
+                      <Bot size={21} />
+                    </div>
+                    <input
+                      aria-label="Hỏi VinCareer AI"
+                      data-testid="hero-question-input"
+                      placeholder={
+                        uploadedCv?.status === "ready"
+                          ? "Hỏi: “CV của mình phù hợp công ty nào nhất?”"
+                          : "Hỏi AI: “Vị trí nào phù hợp với kỹ năng React của mình?”"
+                      }
+                      value={heroQuestion}
+                      onChange={(event) => setHeroQuestion(event.target.value)}
+                    />
+                    <button type="submit" aria-label="Gửi câu hỏi" data-testid="hero-send-button">
+                      Gửi <ArrowRight size={17} />
+                    </button>
+                  </form>
+                </div>
 
                 <div className="suggestion-row">
                   <span>Gợi ý:</span>
@@ -964,6 +1081,24 @@ export default function Home() {
 
             <div className="chat-layout">
               <aside className="chat-sidebar">
+                <button
+                  className={uploadedCv ? "chat-cv-card chat-cv-card--ready" : "chat-cv-card"}
+                  onClick={() => cvInputRef.current?.click()}
+                  data-testid="chat-upload-cv-button"
+                >
+                  {uploadedCv ? <FileText size={18} /> : <UploadCloud size={18} />}
+                  <span>
+                    <strong>{uploadedCv?.name ?? "Tải CV của bạn"}</strong>
+                    <small>
+                      {uploadedCv?.status === "ready"
+                        ? "Đã phân tích · Nhấn để thay"
+                        : uploadedCv?.status === "analyzing"
+                          ? "AI đang đọc CV..."
+                          : "Nhận tư vấn cá nhân hóa"}
+                    </small>
+                  </span>
+                  {uploadedCv?.status === "ready" ? <CheckCircle2 size={16} /> : <ChevronRight size={15} />}
+                </button>
                 <div className="chat-sidebar__title">
                   <Sparkles size={18} />
                   <span><strong>Câu hỏi nên thử</strong><small>Nhấn để hỏi ngay</small></span>
@@ -985,6 +1120,12 @@ export default function Home() {
                 <div className="chat-window__top">
                   <div className="assistant-avatar"><Bot size={21} /></div>
                   <span><strong>VinCareer Assistant</strong><small>Hiểu hệ sinh thái công nghệ Vin</small></span>
+                  {uploadedCv?.status === "ready" && (
+                    <div className="chat-cv-context">
+                      <FileText size={14} />
+                      <span>Đang dùng CV</span>
+                    </div>
+                  )}
                   <button
                     onClick={() => {
                       setChatMessages(initialMessages);
@@ -995,20 +1136,65 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="chat-messages" aria-live="polite">
-                  {chatMessages.map((message) => (
-                    <motion.div
-                      key={message.id}
-                      className={`message message--${message.role}`}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      {message.role === "assistant" && <div className="message-avatar"><Bot size={17} /></div>}
-                      <div>
-                        <span>{message.role === "assistant" ? "VinCareer AI" : "Bạn"}</span>
-                        <p>{message.content}</p>
-                      </div>
-                    </motion.div>
-                  ))}
+                  {chatMessages.map((message) => {
+                    const resultCompany = message.resultCompanyId
+                      ? companies.find((company) => company.id === message.resultCompanyId)
+                      : null;
+                    return (
+                      <motion.div
+                        key={message.id}
+                        className={`message message--${message.role}`}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        {message.role === "assistant" && <div className="message-avatar"><Bot size={17} /></div>}
+                        <div>
+                          <span>{message.role === "assistant" ? "VinCareer AI" : "Bạn"}</span>
+                          <p>{message.content}</p>
+                          {resultCompany && (
+                            <motion.div
+                              className="cv-result-card"
+                              data-testid="cv-analysis-result"
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.12 }}
+                            >
+                              <div className="cv-result-card__head">
+                                <span
+                                  style={{ background: resultCompany.accentSoft, color: resultCompany.accent }}
+                                >
+                                  {resultCompany.monogram}
+                                </span>
+                                <div>
+                                  <small>TOP MATCH TỪ CV</small>
+                                  <strong>{resultCompany.name}</strong>
+                                </div>
+                                <em>{message.fitScore ?? 80}% phù hợp</em>
+                              </div>
+                              <div className="cv-result-card__skills">
+                                <span><Check size={13} /> React</span>
+                                <span><Check size={13} /> Git</span>
+                                <span><Check size={13} /> English</span>
+                                <span className="is-gap">+ {resultCompany.fitSkills.find((skill) => !selectedSkills.includes(skill)) ?? "System Design"}</span>
+                              </div>
+                              <p>
+                                CV có nền tảng phù hợp cho vị trí Fresher. Nên làm rõ kết quả dự án và bổ sung kỹ năng còn thiếu trước vòng technical.
+                              </p>
+                              <button
+                                data-testid="view-application-plan"
+                                onClick={() => {
+                                  setFitCompany(resultCompany.id);
+                                  navigateTo("fit");
+                                }}
+                              >
+                                Xem kế hoạch ứng tuyển <ArrowRight size={15} />
+                              </button>
+                            </motion.div>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                   {isTyping && (
                     <motion.div className="message message--assistant" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                       <div className="message-avatar"><Bot size={17} /></div>
@@ -1027,14 +1213,27 @@ export default function Home() {
                     sendChat();
                   }}
                 >
+                  <button
+                    className={uploadedCv ? "composer-upload composer-upload--ready" : "composer-upload"}
+                    type="button"
+                    onClick={() => cvInputRef.current?.click()}
+                    aria-label={uploadedCv ? "Thay CV" : "Tải CV"}
+                  >
+                    {uploadedCv ? <FileText size={17} /> : <UploadCloud size={17} />}
+                  </button>
                   <input
                     value={chatInput}
                     onChange={(event) => setChatInput(event.target.value)}
-                    placeholder="Nhập câu hỏi về công ty, JD hoặc phỏng vấn..."
+                    placeholder={
+                      uploadedCv?.status === "ready"
+                        ? "Hỏi về độ phù hợp của CV, công ty hoặc phỏng vấn..."
+                        : "Nhập câu hỏi về công ty, JD hoặc phỏng vấn..."
+                    }
                     aria-label="Tin nhắn cho VinCareer AI"
+                    data-testid="chat-question-input"
                     disabled={isTyping}
                   />
-                  <button type="submit" disabled={isTyping} aria-label="Gửi tin nhắn">
+                  <button type="submit" disabled={isTyping} aria-label="Gửi tin nhắn" data-testid="chat-send-button">
                     <Send size={18} />
                   </button>
                   <span>Enter để gửi · AI có thể đưa ra thông tin chưa chính xác</span>
