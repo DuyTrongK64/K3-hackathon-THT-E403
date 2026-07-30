@@ -50,6 +50,11 @@ export function useCareerAgent() {
             "Hãy tải CV hoặc dán nội dung CV trước khi yêu cầu Agent matching.",
           JD_DATA_REQUIRED: "Chưa có dữ liệu JD để thực hiện matching.",
           CV_DATA_REQUIRED: "CV chưa có dữ liệu kỹ năng hợp lệ.",
+          CV_EMPTY_CONTENT: "Không tìm thấy nội dung trong CV.",
+          CV_UNREADABLE_CONTENT:
+            "Hệ thống không thể đọc nội dung file này. Vui lòng dùng PDF hoặc DOCX chuẩn.",
+          CV_NO_SKILLS_FOUND:
+            "CV chưa có kỹ năng đủ rõ để thực hiện đánh giá.",
           OPENAI_API_KEY_MISSING:
             "Server chưa có OPENAI_API_KEY. Hãy thêm key vào .env.local rồi khởi động lại.",
           CV_FILE_TOO_LARGE: "CV vượt quá giới hạn 8 MB.",

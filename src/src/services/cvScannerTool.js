@@ -4,6 +4,8 @@ const CV_SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: [
+    "hasReadableContent",
+    "errorCode",
     "skills",
     "experienceYears",
     "targetDomains",
@@ -12,9 +14,13 @@ const CV_SCHEMA = {
     "summary",
   ],
   properties: {
+    hasReadableContent: { type: "boolean" },
+    errorCode: {
+      type: ["string", "null"],
+      enum: ["CV_EMPTY_CONTENT", "CV_UNREADABLE_CONTENT", null],
+    },
     skills: {
       type: "array",
-      minItems: 1,
       items: { type: "string" },
     },
     experienceYears: { type: "number" },
@@ -77,6 +83,7 @@ export async function scanCvInput(
     schema: CV_SCHEMA,
     instructions: `Bạn là CV Scanner cho sinh viên công nghệ.
 Trích xuất đúng dữ kiện có trong CV, không tự thêm kỹ năng hoặc kinh nghiệm.
+Nếu CV trống hoặc không đọc được, đặt hasReadableContent=false, skills=[] và errorCode phù hợp.
 Chuẩn hóa tên kỹ năng (React, TypeScript, Python, PyTorch, SQL...).
 experienceYears là tổng kinh nghiệm liên quan, có thể là số thập phân.
 Suy ra mong muốn nghề nghiệp thận trọng từ mục tiêu, dự án và nội dung CV.
@@ -84,6 +91,13 @@ Trả nội dung tiếng Việt, ngắn gọn và phù hợp ứng viên intern/
     input: [{ role: "user", content }],
     maxOutputTokens: 2200,
   });
+
+  if (!result.data.hasReadableContent) {
+    throw new Error(result.data.errorCode || "CV_UNREADABLE_CONTENT");
+  }
+  if (!result.data.skills?.length) {
+    throw new Error("CV_NO_SKILLS_FOUND");
+  }
 
   const candidateId = `candidate-${Date.now()}`;
   const profile = {

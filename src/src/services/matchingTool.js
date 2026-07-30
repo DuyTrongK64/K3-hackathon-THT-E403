@@ -6,12 +6,12 @@ const clamp = (value, minimum, maximum) =>
 const MATCH_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["matches", "evaluationSummary"],
+  required: ["matches", "evaluationSummary", "noMatchReason"],
   properties: {
     evaluationSummary: { type: "string" },
+    noMatchReason: { type: ["string", "null"] },
     matches: {
       type: "array",
-      minItems: 1,
       maxItems: 3,
       items: {
         type: "object",
@@ -139,10 +139,6 @@ Không cộng điểm cho kỹ năng không xuất hiện trong CV. Lý do phả
     .slice(0, limit)
     .map((match, index) => ({ ...match, rank: index + 1 }));
 
-  if (!topMatches.length) {
-    throw new Error("OPENAI_MATCHES_EMPTY");
-  }
-
   onStatus?.({
     tool: "matching",
     state: "done",
@@ -151,6 +147,11 @@ Không cộng điểm cho kỹ năng không xuất hiện trong CV. Lý do phả
 
   return {
     matches: topMatches,
+    noMatchReason:
+      result.data.noMatchReason ??
+      (topMatches.length
+        ? null
+        : "Không có công ty hoặc vị trí nào phù hợp với kỹ năng trong dữ liệu hiện tại."),
     evaluatedJobs: ranked.length,
     weights: {
       internWishes: 0.42,
