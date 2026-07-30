@@ -14,6 +14,7 @@ from app.services.crawler_tool import analyze_company
 def test_first_person_and_top_n_detection() -> None:
     assert _is_first_person_question("Công ty nào phù hợp với tôi?")
     assert _is_first_person_question("Hãy xem CV của tôi")
+    assert not _is_first_person_question("Lấy cho tôi thông tin JD VinFast")
     assert not _is_first_person_question("So sánh VinAI và VinFast")
     assert _requested_match_limit("top 5 công ty phù hợp") == 5
     assert _requested_match_limit("công ty phù hợp") == 3

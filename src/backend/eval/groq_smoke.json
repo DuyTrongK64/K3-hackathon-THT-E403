@@ -1,0 +1,8 @@
+{
+  "tested_at": "2026-07-30T17:00:26Z",
+  "provider": "Groq",
+  "test": "strict_structured_output_healthcheck",
+  "response_valid": true,
+  "api_key_logged": false,
+  "note": "Một lời gọi AI thật tối thiểu; golden set 30 case vẫn chạy offline để lặp lại được và không tốn quota."
+}

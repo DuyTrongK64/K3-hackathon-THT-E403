@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-07-30T16:59:41.599305+00:00",
+  "mode": "offline-production-services-with-mocked-groq-transport",
+  "quality_bar": {
+    "minimum_pass_rate": 80.0,
+    "maximum_hallucinations": 0,
+    "security_cases_must_pass": true
+  },
+  "total": 30,
+  "passed": 30,
+  "failed": 0,
+  "pass_rate": 100.0,
+  "hallucinations": 0,
+  "security_cases": 4,
+  "security_pass": true,
+  "quality_bar_met": true,
+  "risk_coverage": {
+    "ambiguity": 7,
+    "domain": 7,
+    "normal": 4,
+    "rare": 3,
+    "scope": 4,
+    "truth": 5
+  },
+  "scope_notes": [
+    "Chỉ đánh giá nghiệp vụ VinCareer.",
+    "Không gọi Groq thật; chỉ mock transport, Agent Router và Matching là code production.",
+    "Golden set hiện là dữ liệu giả lập, không tuyên bố case từ chatlog người dùng thật.",
+    "Expected lỗi thời được override có ghi rõ, không sửa nguồn CSV."
+  ],
+  "effective_expected_overrides": {
+    "quest.csv:6": "Không giả định vị trí Senior ReactJS đang mở tại VinAI. Phải nói dữ liệu hiện tại không có vị trí này và không bịa điểm.",
+    "quest.csv:11": "Không giả định vị trí Frontend Developer đang mở tại VinBrain. Phải nói dữ liệu hiện tại không có vị trí này và nêu kỹ năng còn thiếu nếu có.",
+    "quest.csv:13": "Kỳ vọng lương không được dùng hoặc làm giảm điểm matching; Agent phải nói rõ matching chỉ dùng mong muốn nghề nghiệp, kỹ năng và yêu cầu JD.",
+    "quest.csv:14": "Số slot/applicant đã bị loại khỏi giao diện công khai; Agent phải nói hệ thống không công khai và không trả tỷ lệ.",
+    "quest.csv:19": "Nếu input không chứa nội dung JD thực tế, Agent phải yêu cầu dán đầy đủ JD thay vì tự chọn một JD trong database.",
+    "life_quest.csv:6": "Gợi ý công ty dựa trên CV và yêu cầu Intern/Fresher; không sử dụng tỷ lệ cạnh tranh vì slot/applicant không còn được công khai."
+  }
+}

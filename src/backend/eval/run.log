@@ -1,0 +1,40 @@
+generated_at=2026-07-30T16:59:41.599305+00:00
+mode=offline-production-services-with-mocked-groq-transport
+total=30
+passed=30
+failed=0
+pass_rate=100.0%
+hallucinations=0
+security_pass=True
+quality_bar_met=True
+
+[quest.csv] [Case 1] [PASS] OK
+[quest.csv] [Case 2] [PASS] OK
+[quest.csv] [Case 3] [PASS] OK
+[quest.csv] [Case 4] [PASS] OK
+[quest.csv] [Case 5] [PASS] OK
+[quest.csv] [Case 6] [PASS] OK
+[quest.csv] [Case 7] [PASS] OK
+[quest.csv] [Case 8] [PASS] OK
+[quest.csv] [Case 9] [PASS] OK
+[quest.csv] [Case 10] [PASS] OK
+[quest.csv] [Case 11] [PASS] OK
+[quest.csv] [Case 12] [PASS] OK
+[quest.csv] [Case 13] [PASS] OK
+[quest.csv] [Case 14] [PASS] OK
+[quest.csv] [Case 15] [PASS] OK
+[quest.csv] [Case 16] [PASS] OK
+[quest.csv] [Case 17] [PASS] OK
+[quest.csv] [Case 18] [PASS] OK
+[quest.csv] [Case 19] [PASS] OK
+[quest.csv] [Case 20] [PASS] OK
+[life_quest.csv] [Case 1] [PASS] OK
+[life_quest.csv] [Case 2] [PASS] OK
+[life_quest.csv] [Case 3] [PASS] OK
+[life_quest.csv] [Case 4] [PASS] OK
+[life_quest.csv] [Case 5] [PASS] OK
+[life_quest.csv] [Case 6] [PASS] OK
+[life_quest.csv] [Case 7] [PASS] OK
+[life_quest.csv] [Case 8] [PASS] OK
+[life_quest.csv] [Case 9] [PASS] OK
+[life_quest.csv] [Case 10] [PASS] OK
