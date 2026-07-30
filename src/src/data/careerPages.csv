@@ -1,0 +1,9 @@
+id,company_id,team_id,team_name,department,position,url,required_skills,preferred_skills,min_experience,target_wishes,work_mode,slots,applicants
+jd-vf-connected,vinfast,vf-connected-car,Connected Vehicle Platform,Vehicle Cloud,C++ Software Intern,https://mock.vinfast.vn/jobs/cpp,C++|OOP|Git,AWS|Kafka,0,automotive|backend|onsite,Onsite,8,5
+jd-vf-infotainment,vinfast,vf-infotainment,Infotainment Experience,Digital Cockpit,Frontend Intern,https://mock.vinfast.vn/jobs/frontend,React|TypeScript|Git,Android|Kotlin,0,frontend|product|automotive,Hybrid,6,9
+jd-vinai-research,vinai,vinai-smart-mobility,Smart Mobility Research,Computer Vision,AI Research Intern,https://mock.vinai.vn/jobs/research,Python|PyTorch|Math,C++|CUDA,0,ai|research|computer vision,Onsite,5,12
+jd-vinai-genai,vinai,vinai-genai,Generative AI Platform,Foundation Models,GenAI Intern,https://mock.vinai.vn/jobs/genai,Python|LLM|Git,Docker|Kubernetes,0,ai|genai|research,Hybrid,4,7
+jd-vbd-data,vinbigdata,vbd-data-platform,Enterprise Data Platform,Data Engineering,Data Engineer Intern,https://mock.vinbigdata.vn/jobs/data,Python|SQL|Git,Spark|Kubernetes,0,data|platform|backend,Hybrid,7,4
+jd-om-frontend,onemount,om-consumer-platform,Consumer Experience Platform,Digital Product,Frontend Intern,https://mock.onemount.vn/jobs/frontend,React|TypeScript|JavaScript,Product|GCP,0,frontend|product|fintech,Hybrid,10,8
+jd-vb-imaging,vinbrain,vb-medical-imaging,Medical Imaging AI,Clinical AI,AI Engineer Intern,https://mock.vinbrain.vn/jobs/ai,Python|PyTorch|Git,React|Azure,0,ai|healthtech|social impact,Hybrid,5,3
+jd-vincss-security,vincss,vincss-identity,Digital Identity Security,Cybersecurity,Security Engineer Intern,https://mock.vincss.vn/jobs/security,Python|Linux|Networking,Docker|IoT,0,security|backend|iot,Onsite,5,4
