@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vincareer-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vincareer
+      POSTGRES_USER: vincareer
+      POSTGRES_PASSWORD: vincareer
+    ports:
+      - "5432:5432"
+    volumes:
+      - vincareer_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vincareer -d vincareer"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  vincareer_postgres_data:

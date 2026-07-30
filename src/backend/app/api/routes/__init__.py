@@ -1,0 +1,1 @@
+"""VinCareer API route modules."""

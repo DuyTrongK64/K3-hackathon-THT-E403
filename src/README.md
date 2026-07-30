@@ -1,110 +1,112 @@
-# vinext-starter
+# VinCareer Insight AI — Full-stack
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+VinCareer đã được tách thành React Frontend, FastAPI Backend và PostgreSQL.
+UI cũ được giữ lại qua cùng design tokens, CSS classes, responsive layout và Motion.
 
-## Prerequisites
+## Cấu trúc
 
-- Node.js `>=22.13.0`
+```text
+.
+├── docker-compose.yml
+├── backend/
+│   ├── app/
+│   │   ├── api/routes/       # Companies, Criteria, Portfolio, Agent, Users
+│   │   ├── core/             # Settings, database, admin security
+│   │   ├── data/             # CSV seed cho 6 công ty và JD
+│   │   ├── models/           # SQLAlchemy models
+│   │   ├── schemas/          # Pydantic request/response
+│   │   ├── services/         # Agent + Crawler + Scanner + Matching
+│   │   └── main.py
+│   ├── tests/
+│   ├── Dockerfile
+│   └── requirements.txt
+└── frontend/
+    ├── app/
+    ├── src/
+    │   ├── components/FloatingAIChat.jsx
+    │   ├── layouts/GlobalLayout.jsx
+    │   ├── views/            # Home, Comparison, Portfolio SPA views
+    │   └── services/apiClient.js
+    └── package.json
+```
 
-## Quick Start
+## 1. Khởi động PostgreSQL
 
 ```bash
-npm install
-cp .env.example .env.local
-npm run dev
-npm run build
+docker compose up -d
+docker compose ps
 ```
 
-Add your Groq key to `.env.local` before starting the app:
+Database local dùng `vincareer/vincareer`, database name `vincareer`, cổng `5432`.
+Volume Docker giữ dữ liệu qua các lần restart.
+
+## 2. Cấu hình và chạy Backend
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+Sửa `backend/.env`, đặc biệt:
 
 ```dotenv
-GROQ_API_KEY=gsk_your-real-groq-api-key
-GROQ_MODEL=openai/gpt-oss-20b
+GROQ_API_KEY=gsk_your_real_key
+ADMIN_API_KEY=your_long_random_admin_key
 ```
 
-The same server-side key is shared by the Agent Router, Crawler, CV Scanner,
-and Matching Engine. Uploaded PDF/DOCX files are converted to text locally
-before their extracted content is sent to Groq.
+Sau đó:
 
-This starter does not use `wrangler.jsonc`.
-
-## Included Shape
-
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+Backend tự tạo bảng và seed 6 công ty cùng tiêu chí mặc định khi database trống.
+Swagger UI: `http://localhost:8000/docs`.
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+## 3. Cấu hình và chạy Frontend
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
+Mở terminal khác:
 
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
+```bash
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev
+```
 
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
+Mở `http://localhost:3000`. Frontend chỉ chứa
+`NEXT_PUBLIC_API_BASE_URL`; không đưa Groq key vào Frontend.
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
+## API cốt lõi
 
-## Useful Commands
+- `GET /api/v1/companies`
+- `POST/PATCH/DELETE /api/v1/companies` — cần header `X-Admin-Key`
+- `GET /api/v1/criteria`
+- `POST/PATCH/DELETE /api/v1/criteria` — cần header `X-Admin-Key`
+- `POST /api/v1/portfolios/scan` — multipart PDF/DOCX
+- `POST /api/v1/portfolios/scan-text`
+- `GET /api/v1/portfolios/{id}`
+- `POST /api/v1/agent/chat`
 
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+Ví dụ cập nhật trọng số:
 
-## Learn More
+```bash
+curl -X PATCH http://localhost:8000/api/v1/criteria/CRITERION_UUID \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Key: your_long_random_admin_key" \
+  -d '{"weight": 0.55}'
+```
 
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+Matching chỉ dùng mong muốn, kỹ năng ứng viên và yêu cầu nhà tuyển dụng; không
+dùng lương. Nếu Admin thêm một criterion key mới chưa được Matching hỗ trợ, hệ
+thống chấm phần đó bằng 0 thay vì phát sinh lỗi hoặc suy đoán dữ liệu.
+
+## Kiểm thử
+
+```bash
+cd backend && .venv/bin/pytest
+cd ../frontend && npm test && npm run lint && npm run build
+```
