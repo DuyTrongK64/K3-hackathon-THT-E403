@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     seed_admin_name: str = "VinCareer Admin"
     groq_api_key: str = Field(default="", repr=False)
     groq_model: str = "openai/gpt-oss-20b"
+    embedding_backend: str = "sentence_transformer"
+    embedding_model: str = (
+        "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    )
     max_cv_bytes: int = 8 * 1024 * 1024
 
     model_config = SettingsConfigDict(

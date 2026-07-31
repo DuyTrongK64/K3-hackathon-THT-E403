@@ -48,7 +48,8 @@ Tài liệu đề bài, guide, template và rubric gốc được bảo toàn tr
 ## Phần thật và phần mock
 
 **Chạy thật:** React UI, FastAPI, PostgreSQL, JWT/RBAC, upload/parse PDF-DOCX,
-Portfolio, Matching, Agent qua Groq, CRUD Admin và chức năng Quan tâm.
+Portfolio, hybrid Semantic Matching bằng vector/cosine, Agent qua Groq, CRUD
+Admin và chức năng Quan tâm.
 
 **Mock/seed:** danh sách công ty và JD được seed từ CSV mẫu; Crawler chưa truy
 cập website tuyển dụng thật; eval mock transport Groq để chạy lặp lại mà không

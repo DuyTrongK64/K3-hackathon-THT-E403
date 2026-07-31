@@ -386,7 +386,11 @@ async def process_agent_message(
             {
                 "tool": "matching",
                 "state": "done",
-                "message": "Đã chấm điểm bằng tiêu chí trong PostgreSQL.",
+                "message": (
+                    "Đã tạo embedding CV/JD và xếp hạng bằng cosine semantic; "
+                    "keyword chỉ dùng để chẩn đoán độ phủ. "
+                    f"Backend: {matches[0]['embedding_backend'] if matches else 'n/a'}."
+                ),
             }
         )
         if matches and max(match["score"] for match in matches) <= 0:
@@ -396,7 +400,10 @@ async def process_agent_message(
                 "theo dữ liệu hiện tại.",
                 trace,
             )
-        answer = "Chưa có công ty đủ dữ liệu để xếp hạng."
+        answer = (
+            "Không có công ty hoặc vị trí nào phù hợp với kỹ năng trong CV "
+            "theo dữ liệu hiện tại."
+        )
         if matches:
             ranking = [
                 (

@@ -16,6 +16,7 @@ class MatchResult(BaseModel):
     score: int
     score_detail: dict[str, float]
     reasons: list[str]
+    embedding_backend: str
 
 
 class AgentChatResponse(BaseModel):
