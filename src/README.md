@@ -111,6 +111,31 @@ Matching chỉ dùng mong muốn, kỹ năng ứng viên và yêu cầu nhà tuy
 dùng lương. Nếu Admin thêm một criterion key mới chưa được Matching hỗ trợ, hệ
 thống chấm phần đó bằng 0 thay vì phát sinh lỗi hoặc suy đoán dữ liệu.
 
+### Hybrid Semantic Matching
+
+Matching Engine tạo vector embedding cho cả CV và nội dung JD, sau đó tính
+cosine similarity cho kỹ năng bắt buộc, kỹ năng ưu tiên, mong muốn và ngữ cảnh
+toàn hồ sơ. `score` và thứ tự Top công ty lấy từ semantic score; exact keyword
+chỉ còn là tín hiệu chẩn đoán, không tham gia quyết định ranking.
+
+Mặc định backend dùng model đa ngôn ngữ:
+
+```dotenv
+EMBEDDING_BACKEND=sentence_transformer
+EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+```
+
+Model được tải/cache ở lần chạy đầu. Khi chạy offline hoặc chưa cài model, hệ
+thống dùng vector fallback có ontology VinCareer (ví dụ ReactJS ↔ front-end
+framework, quản lý nhóm ↔ leadership) để flow không văng lỗi. Không cần thêm
+API key; Groq key hiện tại vẫn chỉ phục vụ Scanner/Agent.
+
+Nếu ngay cả công ty tốt nhất cũng có semantic score dưới ngưỡng an toàn, hệ
+thống trả empty state thay vì ép Top 3. Khi có ít nhất một match đủ ngưỡng, hệ
+thống trả đúng Top N theo thứ tự semantic; keyword không được thay đổi thứ tự.
+Response trả thêm `embedding_backend` để QA biết lượt chạy dùng transformer hay
+fallback offline.
+
 ## Phân quyền
 
 - `user`: xem/tìm công ty, Company Detail, so sánh, tải CV, Portfolio, Top 3

@@ -252,6 +252,8 @@ export default function App() {
               companies={companies}
               initialSearch={companySearch}
               interestStatuses={interestStatuses}
+              onToggleInterest={handleToggleInterest}
+              notify={notify}
             />
           ) : visiblePage === "comparison" ? (
             <ComparisonPage notify={notify} />

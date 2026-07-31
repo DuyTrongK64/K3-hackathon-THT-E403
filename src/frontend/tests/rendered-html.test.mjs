@@ -56,7 +56,11 @@ test("preserves auth, company detail and top matching routes", async () => {
   assert.match(login, /careerApi\.login/);
   assert.match(companies, /<CompanyDetail/);
   assert.match(companies, /người quan tâm/);
-  assert.match(companies, /interestCounts\.get\(company\.id\)/);
+  assert.match(companies, /interestByCompany\.get\(company\.id\)/);
+  assert.match(companies, /onToggleInterest/);
+  assert.match(companies, /selectedInterestCount >= 3/);
+  assert.match(companies, /company-interest-button/);
+  assert.match(app, /onToggleInterest=\{handleToggleInterest\}/);
   assert.match(detail, /careerApi\.getCompanyAnalysis/);
   assert.doesNotMatch(detail, /Lộ trình phỏng vấn|Điểm cộng|Điểm trừ/);
   assert.match(matches, /người quan tâm/);
